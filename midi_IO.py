@@ -13,6 +13,12 @@ class midi_IO(asyncio.Task):
         self.midiOut = self.ask_for_midi_device(kind="output")  # prompt the user to choose MIDI input ...
         self.midiIn = self.ask_for_midi_device(kind="input")  # ... and output device
 
+        for i in range(5):
+            self.midiOut.note_on(44+i, 127)
+            time.sleep(.5)
+            self.midiOut.note_off(44+i, 127)
+        
+
         # initialize state
         self.count = 0  # current step based on clock sync
         self.clockTicks = 0  # counter for received clock ticks
@@ -44,6 +50,7 @@ class midi_IO(asyncio.Task):
     async def read(self, number):
         return self.midiIn.read(number)
     async def send_midi(self, midi_notes): #note = [[[[248, 0, 0, 0], 159400]]] -> [Command, Channel, Velocity, ?], Timestamp]
+        #print(midi_notes)
         self.midiOut.write(midi_notes)
 
     async def clock(self):
