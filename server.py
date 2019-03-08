@@ -1,42 +1,56 @@
-from midi_IO import *
+#!/usr/bin/env python
+
+# WS server example
+
 import asyncio
 import websockets
 import numpy as np
+import config
+import random
+import time
+import concurrent
+import json
 
-midi_count= 5 #number of notes that are transmitted
+connected = False
 
-
-async def midi_in(websocket, path):
-    while True:
-        #midi_data = await midi.read(midi_count)
-        #midi_data = lambda midi_data9 : (n for n in midi_data)
-        result = str(await asyncio.gather(midi.read(midi_count)))
-
-        if (len(result)) > 4: #string length of empty midi-note
-            await websocket.send(result)
-        break
-
-
-
-async def clock(websocket, path):
-    #task = asyncio.ensure_future(midi.run())
-    #task = asyncio.create_task()
-    inner_count = 0
+async def hello(websocket, path):
 
     while True:
-        await midi.clock()
-        if (inner_count != int(midi.count/2)):
-            inner_count = int(midi.count/2)
-            print("Sending" + str(inner_count))
-            await websocket.send(str(inner_count))
+        global connected
+        try:
+            if not connected:
+                answer = await websocket.recv()
+                greeting = f"Server connected!"
+                await websocket.send(greeting)
+                print(f"{answer}")
+                connected= True
+
+            sequence = np.zeros((12, 16), dtype=np.int)
+            for i in range(30):
+                sequence[random.randint(0, 11)][random.randint(0, 15)] = random.randint(0, 1)
+
+            #await websocket.send(f""+str(sequence))
+            await websocket.send(json.dumps(sequence.tolist()))
+            print(f"Sequence {sequence} has been sent")
+            await asyncio.sleep(8)
+        except (websockets.exceptions.ConnectionClosed, concurrent.futures._base.CancelledError, concurrent.futures._base.CancelledError) as e:
+            print(f"connection lost")
+            connected =False
+            break
+
+
+
+async def send_sth(websocket, path):
+    await print("Test")
 
 
 
 
 
-midi = midi_IO()
 
-start_server = websockets.serve(midi_in, 'localhost', 8765)
+start_server = websockets.serve(hello, 'localhost', 8765, ping_timeout=50)
+
+
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()

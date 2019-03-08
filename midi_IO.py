@@ -3,75 +3,56 @@ import pygame.midi
 import time
 import random
 import asyncio
+import numpy as np
+
 
 class midi_IO(asyncio.Task):
-    def __init__(self):
-        print("MIDI IO INIT")
-        pygame.init()
-        pygame.midi.init()
-
-        self.midiOut = self.ask_for_midi_device(kind="output")  # prompt the user to choose MIDI input ...
-        self.midiIn = self.ask_for_midi_device(kind="input")  # ... and output device
-
-        for i in range(5):
-            self.midiOut.note_on(44+i, 127)
-            time.sleep(.5)
-            self.midiOut.note_off(44+i, 127)
-        
+    def __init__(self, pygame_midi_enabled =True):
+        self.pygame_midi_enabled = pygame_midi_enabled
+        if (pygame_midi_enabled):
+            pygame.init()
+            pygame.midi.init()
+            self.midiOut = self.ask_for_midi_device(kind="output")  # prompt the user to choose MIDI input ...
+            self.midiIn = self.ask_for_midi_device(kind="input")  # ... and output device
 
         # initialize state
-        self.count = 0  # current step based on clock sync
+        self.step = 0  # current step based on clock sync
         self.clockTicks = 0  # counter for received clock ticks
+        self.last_timestamp = 0 #Last timestamp of a new step
         self.running = True
         self.randomness = 0.
 
-
-    async def run(self):
-        print("CLOCK RUNNING")
-        # initialize the pygame screen
-        (width, height) = (500, 600)
-        #screen = pygame.display.set_mode((width, height))
-        #screen.fill((255, 255, 255))
-
-        currentStep = 0
-        while self.running:
-
-            #self.pygame_io()
-            self.clock()
-            #pygame.display.flip()
-
-        self.quit()
-
-
-    def pygame_io(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
     async def read(self, number):
-        return self.midiIn.read(number)
+        if self.pygame_midi_enabled:
+            return self.midiIn.read(number)
     async def send_midi(self, midi_notes): #note = [[[[248, 0, 0, 0], 159400]]] -> [Command, Channel, Velocity, ?], Timestamp]
-        #print(midi_notes)
-        self.midiOut.write(midi_notes)
+        if self.pygame_midi_enabled:
+            self.midiOut.write(midi_notes)
 
-    async def clock(self):
+    def clock(self):
 
-        for midiEvent in self.midiIn.read(1):  # read 5 MIDI events from the buffer. TODO: Good number?
+        for midiEvent in self.midiIn.read(15):  # read 5 MIDI events from the buffer. TODO: Good number?
             if (midiEvent[0][0]) == 248:
-
-                self.clockTicks = (self.clockTicks + 1) % 12  # count the clock ticks
+                self.clockTicks = (self.clockTicks + 1) % 6  # count the clock ticks
+                self.last_timestamp = midiEvent[1]
                 if (self.clockTicks == 0):  # 12 clock ticks are one 16th note
                     self.clockTicks = 0  # reset the tick counter
-                    self.count = (self.count + 1) % 16  # advance the 16th note counter
+                    self.step = (self.step + 1) % 16  # advance the 16th note counter
+
+                    
+        return self.step
+
+    def write_midi(self, midi):
         
-        return self.count
-
-
-
-
+        self.midiOut.write(midi)
+        
     def quit(self):
-        self.midiOut.close()
-        self.midiIn.close()
+        if self.pygame_midi_enabled:
+            self.midiOut.close()
+            self.midiIn.close()
         pygame.quit()
+    def get_midi_time(self):
+        return pygame.midi.time()
 
     def ask_for_midi_device(self, kind="input"):
         """ Let the user choose the midi device to use """

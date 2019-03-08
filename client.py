@@ -1,59 +1,61 @@
 import asyncio
-import time
 import websockets
 from midi_IO import*
+import config
+from sequencer import*
+import numpy as np
+import concurrent.futures
+import json
 
-times =0
-mean_duration=0
-def statistics(duration):
-    global times
-    global mean_duration
-    times +=1
-    mean_duration+=duration
-def list_parser(str_list):
+seq = step_sequencer()
+connected=False
+
+async def get_new_sequences():
+
+    global connected
+    print("Trying to connect...")
+    while not connected:
+        try:
+            async with websockets.connect(
+                    'ws://localhost:8765') as websocket:
+                while True:
+                    if not connected:
+                        await websocket.send(f"Client connected")
+                        greeting = await websocket.recv()
+                        print(f"< {greeting}")
+                        connected = True
+                    else:
+                        sequence = np.asarray(json.loads(await websocket.recv()), dtype=np.int)
+                        seq.sequences = sequence
+                        print("NEW SEQUENCE:")
+                        print(f"{sequence}")
+
+        except (websockets.exceptions.ConnectionClosed, concurrent.futures._base.CancelledError, OSError, ConnectionResetError) as e:
+            print("Connection lost")
+            connected=False
+async def run_sequencer():
+
+    seq.run_threaded()
+
+
+
+
+if __name__ == '__main__':
+
     
-    str_list= str_list[1:-1]
-    str_list = str_list.split("[")
-    result =[]
-    for elem in str_list:
-        if (len(elem)>2):
-            elem = elem.replace("[", "")
-            elem = elem.replace("]", "")
-            elem = elem.replace(" ", "")
-            elem = [int(i) for i in elem.split(",") if i !="" ]
-            result.append([[int(elem[0]), int(elem[1]), int(elem[2]), int(elem[3])], int(elem[4])])
+    event_loop = asyncio.get_event_loop()
 
-    return result
-
-
-
-async def send_midi_data():
-    async with websockets.connect(
-            'ws://192.168.1.3:8765') as websocket:
-        while True:
-            await midiio.send_midi( list_parser(await websocket.recv()))
-
-            
-
-
-async def get_tempo():
-    async with websockets.connect(
-            'ws://localhost:8765') as websocket:
-        while True:
-            greeting = await websocket.recv()
-            print(greeting)
-
-#[[[[248, 0, 0, 0], 15078], [[128, 66, 64, 0], 15078], [[144, 67, 1, 0], 15078], [[144, 66, 1, 0], 15078]]]
-
-#print(list_parser("[[[[248, 0, 0, 0], 15078], [[128, 66, 64, 0], 15078], [[144, 67, 1, 0], 15078], [[144, 66, 1, 0], 15078]]]"), "RESULT")
-successful = False
-midiio = midi_IO()
-while not successful:
     try:
-        asyncio.get_event_loop().run_until_complete(send_midi_data())
-        successful = True
-    except:
-
+        asyncio.ensure_future(get_new_sequences())
+        asyncio.ensure_future(run_sequencer())
+        #event_loop.run_until_complete(get_new_sequences())
+        event_loop.run_forever()
+    except :
         pass
-asyncio.get_event_loop().run_forever()
 
+
+    #event_loop.run_until_complete(task)
+    #event_loop.run_until_complete(task1)
+    #event_loop.run_forever()
+    finally:
+        event_loop.close()
