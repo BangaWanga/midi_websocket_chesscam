@@ -16,7 +16,8 @@ class ChessCam:
             [np.array([0, 70, 5]), np.array([50, 200, 50])],   # green
             [np.array([4, 31, 86]), np.array([50, 88, 220])]    # blue
         ]
-        self.states = np.zeros(self.grid.shape[:2], dtype=np.int)   # array that holds a persistent state of the chessboard
+        self.chessboardState = np.zeros(self.grid.shape[:2], dtype=np.int)
+
 
     def update(self, updateGrid=True):
 
@@ -79,8 +80,6 @@ class ChessCam:
         # Display the resulting frame
         cv2.imshow('computer visions', dst)
 
-        # if cv2.waitKey(1) & 0xFF == ord('q'):
-        #     break
 
     def make_grid(self, centroids):
         # We assume that the field in the upper left corner is white
@@ -114,7 +113,6 @@ class ChessCam:
         self.grid = self.grid.astype(np.int)
 
 
-
     def gridToState(self):
         print("Making a new color_state")
 
@@ -139,27 +137,25 @@ class ChessCam:
                         mask = cv2.inRange(areaOfInterest, lower, upper)  # returns binary mask: pixels which fall in the range are white (255), others black (0)
                         if np.mean(mask) > colored_threshold:  # if some significant amount of pixels in the mask is 255, we consider it colored
                             color_state = colorNum + 1  # +1 because colorNum is zero-based, but color_state zero is Off
-                    self.states[x, y] = color_state
+                    self.chessboardState[x, y] = color_state
 
                 except IndexError:
                     # if an error occurs due to invalid coordinates, just don't change the color_state
                     pass
 
         # dissect the board into the four 16-step sequences (two rows for each sequence of 16 steps)
-        seq1 = np.concatenate((self.states[:,0], self.states[:,1]))
-        seq2 = np.concatenate((self.states[:,2], self.states[:,3]))
-        seq3 = np.concatenate((self.states[:,4], self.states[:,5]))
-        seq4 = np.concatenate((self.states[:,6], self.states[:,7]))
+        seq1 = np.concatenate((self.chessboardState[:, 0], self.chessboardState[:, 1]))
+        seq2 = np.concatenate((self.chessboardState[:, 2], self.chessboardState[:, 3]))
+        seq3 = np.concatenate((self.chessboardState[:, 4], self.chessboardState[:, 5]))
+        seq4 = np.concatenate((self.chessboardState[:, 6], self.chessboardState[:, 7]))
         return (seq1, seq2, seq3, seq4)
+
 
     def printColors(self, j, i):
         aoiHalfWidth = 2
         areaOfInterest = self.frame[self.grid[j, i, 1]-aoiHalfWidth:self.grid[j, i, 1]+aoiHalfWidth, self.grid[j, i, 0]-aoiHalfWidth:self.grid[j, i, 0]+aoiHalfWidth]        
         print(areaOfInterest)
 
-        # for colorNum, (lower, upper) in enumerate(self.colorBoundaries):
-        #     mask = cv2.inRange(areaOfInterest, lower, upper)  # returns binary mask: pixels which fall in the range are white (255), others black (0)
-        #     print(mask)
 
     def setRange(self, colorIndex, j, i):
         aoiHalfWidth = 2
@@ -168,25 +164,25 @@ class ChessCam:
         lowerColor = np.clip(meanColor - 20, 0, 255).astype(np.uint8)
         upperColor = np.clip(meanColor + 20, 0, 255).astype(np.uint8)
 
-        # print(lowerColor)
-        # print(upperColor)
-
         self.colorBoundaries[colorIndex] = [lowerColor, upperColor]
 
 
-    def quit(self):
-        # When everything done, release the capture
-        self.cap.release()
-        cv2.destroyAllWindows()
         
     def save_calibrated(self):
         np.save('colors.yamama', self.colorBoundaries)
+
+
     def load_calibrated(self):
         try:
             self.colorBoundaries = np.load('colors.yamama')
         except:
             print("No file detected for color values")
 
+
+    def quit(self):
+        # When everything done, release the capture
+        self.cap.release()
+        cv2.destroyAllWindows()
 
 
 if __name__=="__main__":
