@@ -1,11 +1,8 @@
-import asyncio
 import websockets
-from midi_IO import*
-import config
-from sequencer import*
-import numpy as np
 import concurrent.futures
 import json
+
+from sequencer import*
 
 seq = step_sequencer()
 connected=False
@@ -28,11 +25,7 @@ async def get_new_sequences():
                         sequence = np.asarray(json.loads(await websocket.recv()), dtype=np.int)
                         seq.set_new_sequence(sequence)
 
-
-                        #print(f"{sequence}")
-
         except (websockets.exceptions.ConnectionClosed, concurrent.futures._base.CancelledError, OSError, ConnectionResetError, json.decoder.JSONDecodeError) as e:
-            
             try:
                 seq.show_log("Connection closed because of Error: " + type(e).__name__)
                 if type(e).__name__ == 'JSONDecodeError':
@@ -41,9 +34,7 @@ async def get_new_sequences():
                 pass
 
 async def run_sequencer():
-
     seq.run_threaded()
-
 
 
 

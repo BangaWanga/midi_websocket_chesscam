@@ -11,10 +11,6 @@ import sys
 
 font = QFont("Times", 15, QFont.Bold)
 
-class Gui_Handler:
-    def __init__(self):
-        
-
 class Gui(QWidget):
     def __init__(self):
         super().__init__()

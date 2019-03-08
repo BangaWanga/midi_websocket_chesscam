@@ -1,12 +1,7 @@
 import pygame
 import pygame.midi
-import time
-import random
 import asyncio
-import numpy as np
 import config
-
-
 
 
 class midi_IO(asyncio.Task):
@@ -15,8 +10,8 @@ class midi_IO(asyncio.Task):
         if (pygame_midi_enabled):
             pygame.init()
             pygame.midi.init()
-            self.midiOut = self.ask_for_midi_device(kind="output", default_value=config.midiout)  # prompt the user to choose MIDI input ...
-            self.midiIn = self.ask_for_midi_device(kind="input",default_value=config.midiin)  # ... and output device
+            self.midiOut = self.ask_for_midi_device(kind="output",default_value=config.midiout)
+            self.midiIn = self.ask_for_midi_device(kind="input", default_value=config.midiin)
 
         # initialize state
         self.step = 0  # current step based on clock sync
@@ -59,7 +54,7 @@ class midi_IO(asyncio.Task):
 
     def ask_for_midi_device(self, kind="input", default_value=False):
 
-        if (isinstance(default_value, int)):
+        if (default_value != False):
             return self.__return_pygame_IO__(kind, default_value)
 
         """ Let the user choose the midi device to use """
