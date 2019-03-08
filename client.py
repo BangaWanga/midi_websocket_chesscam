@@ -1,8 +1,8 @@
 import websockets
-from sequencer import*
-import numpy as np
 import concurrent.futures
 import json
+
+from sequencer import*
 
 seq = step_sequencer()
 connected=False
