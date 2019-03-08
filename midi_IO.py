@@ -4,6 +4,9 @@ import time
 import random
 import asyncio
 import numpy as np
+import config
+
+
 
 
 class midi_IO(asyncio.Task):
@@ -12,8 +15,8 @@ class midi_IO(asyncio.Task):
         if (pygame_midi_enabled):
             pygame.init()
             pygame.midi.init()
-            self.midiOut = self.ask_for_midi_device(kind="output")  # prompt the user to choose MIDI input ...
-            self.midiIn = self.ask_for_midi_device(kind="input")  # ... and output device
+            self.midiOut = self.ask_for_midi_device(kind="output", default_value=config.midiout)  # prompt the user to choose MIDI input ...
+            self.midiIn = self.ask_for_midi_device(kind="input",default_value=config.midiin)  # ... and output device
 
         # initialize state
         self.step = 0  # current step based on clock sync
@@ -43,7 +46,7 @@ class midi_IO(asyncio.Task):
         return self.step
 
     def write_midi(self, midi):
-        
+
         self.midiOut.write(midi)
         
     def quit(self):
@@ -54,7 +57,11 @@ class midi_IO(asyncio.Task):
     def get_midi_time(self):
         return pygame.midi.time()
 
-    def ask_for_midi_device(self, kind="input"):
+    def ask_for_midi_device(self, kind="input", default_value=False):
+
+        if (isinstance(default_value, int)):
+            return self.__return_pygame_IO__(kind, default_value)
+
         """ Let the user choose the midi device to use """
         # Check, if we are looking for a valid kind:
         assert (kind in ("input", "output")), "Invalid MIDI device kind: {0}".format(kind)
@@ -86,6 +93,12 @@ class midi_IO(asyncio.Task):
         print(
             "Chosen {0} device: ID: {1}\t".format(kind, user_input_id) + str(info_tuple[0]) + "\t" + str(info_tuple[1]))
         # Open port from chosen device
+        if kind == "input":
+            return pygame.midi.Input(device_id=user_input_id)
+        elif kind == "output":
+            return pygame.midi.Output(device_id=user_input_id, latency=0)
+
+    def __return_pygame_IO__(self, kind, user_input_id):
         if kind == "input":
             return pygame.midi.Input(device_id=user_input_id)
         elif kind == "output":

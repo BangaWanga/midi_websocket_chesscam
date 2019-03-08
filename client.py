@@ -26,13 +26,20 @@ async def get_new_sequences():
                         connected = True
                     else:
                         sequence = np.asarray(json.loads(await websocket.recv()), dtype=np.int)
-                        seq.sequences = sequence
-                        print("NEW SEQUENCE:")
-                        print(f"{sequence}")
+                        seq.set_new_sequence(sequence)
 
-        except (websockets.exceptions.ConnectionClosed, concurrent.futures._base.CancelledError, OSError, ConnectionResetError) as e:
-            print("Connection lost")
-            connected=False
+
+                        #print(f"{sequence}")
+
+        except (websockets.exceptions.ConnectionClosed, concurrent.futures._base.CancelledError, OSError, ConnectionResetError, json.decoder.JSONDecodeError) as e:
+            
+            try:
+                seq.show_log("Connection closed because of Error: " + type(e).__name__)
+                if type(e).__name__ == 'JSONDecodeError':
+                    connected = False
+            except:
+                pass
+
 async def run_sequencer():
 
     seq.run_threaded()

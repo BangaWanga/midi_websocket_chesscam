@@ -31,7 +31,7 @@ async def hello(websocket, path):
 
             #await websocket.send(f""+str(sequence))
             await websocket.send(json.dumps(sequence.tolist()))
-            print(f"Sequence {sequence} has been sent")
+            print(f"New Sequence has been sent")
             await asyncio.sleep(8)
         except (websockets.exceptions.ConnectionClosed, concurrent.futures._base.CancelledError, concurrent.futures._base.CancelledError) as e:
             print(f"connection lost")
