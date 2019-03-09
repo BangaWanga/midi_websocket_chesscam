@@ -7,7 +7,7 @@ import concurrent
 import json
 from Server.chesscam import ChessCam
 import asyncio
-import keyboard
+
 
 
 class Hub:
@@ -30,33 +30,36 @@ class Hub:
                     print(f"{answer}")
                     self.connected= True
                 else:
-                    self.cam.run() #Getting new pictures, could be flagged as well
+                    user_trigger =False
 
-                    
-                    if self.cam.new_sequence_captured: #May change according to which device you want to control sending it with. Could be triggered by anything
+                    if input("For Sending press 's'\n") =="s":  # if key 's' is pressed
                         self.sequence_ready_to_send=True
+                        user_trigger=True
+                    self.cam.run(user_trigger) #Getting new pictures, could be flagged as well
+
+
                     if self.sequence_ready_to_send:
-                        await websocket.send(json.dumps(self.new_sequence.tolist()))
+                        await websocket.send(json.dumps(self.cam.track.sequences.tolist()))
                         self.sequence_ready_to_send=False
                         print(f"New Sequence has been sent")
 
-            except (websockets.exceptions.ConnectionClosed, concurrent.futures._base.CancelledError, concurrent.futures._base.CancelledError) as e:
-                print(f"connection lost")
+            except Exception as e:
+                print(f"connection lost because of Error: {type(e).__name__}")
                 self.connected =False
                 break
+
+
     def chesscam(self):
 
-        while not self.cam.new_sequence_captured:
+        while not self.cam.grid_captured:
             self.cam.run()
             if self.cam.grid_captured:
 
                 self.new_sequence=self.cam.track.sequences
                 self.sequence_ready_to_send=True
-                print(self.new_sequence)
-        if self.cam.new_sequence_captured: #So we know we can setup the server
-            print("It worked!")
-            self.cam.new_sequence_captured=False
-            return True
+
+
+                return True #we can open the server now
 
 if __name__=="__main__":
 

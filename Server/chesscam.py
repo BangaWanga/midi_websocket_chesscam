@@ -21,11 +21,7 @@ class ChessCam:
         self.new_sequence_captured=False
 
         # define color boundaries (lower, upper) (in RGB, since we always flip the frame)
-        self.colorBoundaries = [
-            [np.array([100, 15, 17]), np.array([200, 56, 50])], # red
-            [np.array([0, 70, 5]), np.array([50, 200, 50])],   # green
-            [np.array([4, 31, 86]), np.array([50, 88, 220])]    # blue
-        ]
+        self.colorBoundaries = config.colorBoundaries
         self.states = np.zeros(self.grid.shape[:2], dtype=np.int)   # array that holds a persistent state of the chessboard
         print("Chesscam init finished")
 
@@ -33,13 +29,16 @@ class ChessCam:
 
         #At first we need the grid 
         if not self.grid_captured:
-            self.update(True)
+            self.update(updateGrid=True)
         else:
-            self.update(False)
+
+            self.update(updateGrid=False)
             if (user_trigger):
                 result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
                 if (result):
                     self.new_sequence_captured=True
+                else:
+                    print("no change")
 
 
 
@@ -148,9 +147,10 @@ class ChessCam:
         # Cast all the coordinates to int (effectively applying the floor function) to yield actual pixel coordinates
         self.grid = self.grid.astype(np.int)
         self.grid_captured = True
+        print("Grid Captured.")
 
     def gridToState(self):
-        print("Making a new color_state")
+        #print("Making a new color_state")
 
         # tolerance = 80
         aoiHalfWidth = 5  # half width in pixels of the square area of interest around the centroids

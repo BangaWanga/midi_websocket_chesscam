@@ -4,7 +4,7 @@ import json
 import numpy as np
 from sequencer import*
 import asyncio
-
+import config
 seq = step_sequencer()
 
 connected=False
@@ -19,19 +19,21 @@ async def get_new_sequences():
                     'ws://localhost:8765') as websocket:
                 while True:
                     if not connected:
-                        await websocket.send(f"Client connected")
+                        await websocket.send(config.client_greeting)
                         greeting = await websocket.recv()
                         print(f"< {greeting}")
                         connected = True
                     else:
                         sequence = np.asarray(json.loads(await websocket.recv()), dtype=np.int)
                         seq.set_new_sequence(sequence)
+                        print(f"new sequence: {sequence}")
 
         except (websockets.exceptions.ConnectionClosed, concurrent.futures._base.CancelledError, OSError, ConnectionResetError, json.decoder.JSONDecodeError) as e:
             try:
                 seq.show_log("Connection closed because of Error: " + type(e).__name__)
                 if type(e).__name__ == 'JSONDecodeError':
                     connected = False
+                    break
             except:
                 pass
 
@@ -48,14 +50,8 @@ if __name__ == '__main__':
     try:
         asyncio.ensure_future(get_new_sequences())
         asyncio.ensure_future(run_sequencer())
-        #event_loop.run_until_complete(get_new_sequences())
         event_loop.run_forever()
     except :
         pass
-
-
-    #event_loop.run_until_complete(task)
-    #event_loop.run_until_complete(task1)
-    #event_loop.run_forever()
     finally:
         event_loop.close()

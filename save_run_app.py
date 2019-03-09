@@ -13,7 +13,7 @@ while True:
         break
     elif mode=="2":
         print("Creating Client...")
-        script = ("py Client\client.py")
+        script = ("py Client\client_alt.py")
         break
     else:
         print("Incorrect input...")
