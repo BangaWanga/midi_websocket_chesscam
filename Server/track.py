@@ -23,5 +23,7 @@ class Track:
         if np.array_equal(self.sequences, new_sequences):
             return False
         else:
+
             self.sequences = new_sequences
+            return True
         
