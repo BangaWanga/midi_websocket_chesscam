@@ -21,7 +21,7 @@ class Hub:
 
     async def hello(self, websocket, path):
 
-        await self.chesscam()
+        self.cam.run()
         while True:
             try:
                 if not self.connected:
@@ -41,9 +41,9 @@ class Hub:
                 print(f"connection lost")
                 self.connected =False
                 break
-    async def chesscam(self):
+    def chesscam(self):
 
-        await self.cam.run()
+        self.cam.run()
         if (self.cam.send_new_sequence):
             self.new_sequence=self.cam.track.sequences
             self.cam.send_new_sequence =False

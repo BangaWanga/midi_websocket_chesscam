@@ -26,25 +26,23 @@ class ChessCam:
             [np.array([4, 31, 86]), np.array([50, 88, 220])]    # blue
         ]
         self.states = np.zeros(self.grid.shape[:2], dtype=np.int)   # array that holds a persistent state of the chessboard
+        print("Chesscam init finished")
 
-
-    async def run(self):
+    def run(self):
+        print("Chesscam run")
         #At first we need the grid 
         while not self.grid_captured:
-            await self.update(True)
+            self.update(True)
         else:
-            await self.update(False) # Why?
+            self.update(False) # Why?
             if (self.capture_new_sequence):
                 result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
                 if (result):
                     self.send_new_sequence=True
                     return self.track.sequences
-            
-        
-        
 
 
-    async def update(self, updateGrid=True):
+    def update(self, updateGrid=True):
 
         # capture a frame from the video stream
         ret, self.frame = self.cam.read()
@@ -67,6 +65,8 @@ class ChessCam:
 
         # use unsigned int (0 .. 255)
         dst = np.uint8(dst)
+        
+
         # label connected components and calculate the centroids of each chess field
         ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst, 4)
 
@@ -90,6 +90,7 @@ class ChessCam:
         centroids = centroids[np.argsort(centroids[:,1])]
         try:
             if updateGrid:
+
                 self.make_grid(centroids)
             # Write coordinates to the screen
             for i in range(8):
@@ -99,7 +100,6 @@ class ChessCam:
                     cv2.putText(dst, "({0}, {1})".format(i, j), tuple(self.grid[i, j]), fontScale=0.2,
                                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                                 color=c)
-
         except:
 
             pass  # We don't care. Just do nothing.
@@ -111,7 +111,7 @@ class ChessCam:
         # if cv2.waitKey(1) & 0xFF == ord('q'):
         #     break
 
-    async def make_grid(self, centroids):
+    def make_grid(self, centroids):
         # We assume that the field in the upper left corner is white
         # We should have 32 measured centroids in total (for the white fields)
         # The black ones have to be calculated from the white ones here
@@ -143,7 +143,7 @@ class ChessCam:
         self.grid = self.grid.astype(np.int)
         self.grid_captured = True
 
-    async def gridToState(self):
+    def gridToState(self):
         print("Making a new color_state")
 
         # tolerance = 80
@@ -223,7 +223,3 @@ if __name__=="__main__":
         cam.update(True)
 
     cam.quit()
-
-
-
-
