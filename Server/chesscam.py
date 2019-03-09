@@ -1,14 +1,23 @@
 import cv2
 import numpy as np
+from Server.track import Track
+
 
 class ChessCam:
 
     def __init__(self):
         self.grid = np.zeros((8, 8, 2), dtype=np.int)
-        self.cap = cv2.VideoCapture(0)
-        ret, self.frame = self.cap.read()
+        self.cam = cv2.VideoCapture(0)
+        ret, self.frame = self.cam.read()
+
         self.frame = np.flip(self.frame, axis=1)
         self.frame = np.flip(self.frame, axis=2)
+        self.grid_captured = False
+
+        self.track = Track()
+
+        self.capture_new_sequence = False #Flag for new sequences
+        self.send_new_sequence=False
 
         # define color boundaries (lower, upper) (in RGB, since we always flip the frame)
         self.colorBoundaries = [
@@ -16,13 +25,30 @@ class ChessCam:
             [np.array([0, 70, 5]), np.array([50, 200, 50])],   # green
             [np.array([4, 31, 86]), np.array([50, 88, 220])]    # blue
         ]
-        self.chessboardState = np.zeros(self.grid.shape[:2], dtype=np.int)
+        self.states = np.zeros(self.grid.shape[:2], dtype=np.int)   # array that holds a persistent state of the chessboard
 
 
-    def update(self, updateGrid=True):
+    async def run(self):
+        #At first we need the grid 
+        while not self.grid_captured:
+            await self.update(True)
+        else:
+            await self.update(False) # Why?
+            if (self.capture_new_sequence):
+                result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
+                if (result):
+                    self.send_new_sequence=True
+                    return self.track.sequences
+            
+        
+        
+
+
+    async def update(self, updateGrid=True):
 
         # capture a frame from the video stream
-        ret, self.frame = self.cap.read()
+        ret, self.frame = self.cam.read()
+
         # flip it since conventions in cv2 are the other way round
         self.frame = np.flip(self.frame, axis=1)
         self.frame = np.flip(self.frame, axis=2)
@@ -73,15 +99,19 @@ class ChessCam:
                     cv2.putText(dst, "({0}, {1})".format(i, j), tuple(self.grid[i, j]), fontScale=0.2,
                                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                                 color=c)
+
         except:
+
             pass  # We don't care. Just do nothing.
             #print('fuck this shit')
 
         # Display the resulting frame
         cv2.imshow('computer visions', dst)
 
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+        #     break
 
-    def make_grid(self, centroids):
+    async def make_grid(self, centroids):
         # We assume that the field in the upper left corner is white
         # We should have 32 measured centroids in total (for the white fields)
         # The black ones have to be calculated from the white ones here
@@ -111,9 +141,9 @@ class ChessCam:
 
         # Cast all the coordinates to int (effectively applying the floor function) to yield actual pixel coordinates
         self.grid = self.grid.astype(np.int)
+        self.grid_captured = True
 
-
-    def gridToState(self):
+    async def gridToState(self):
         print("Making a new color_state")
 
         # tolerance = 80
@@ -137,25 +167,27 @@ class ChessCam:
                         mask = cv2.inRange(areaOfInterest, lower, upper)  # returns binary mask: pixels which fall in the range are white (255), others black (0)
                         if np.mean(mask) > colored_threshold:  # if some significant amount of pixels in the mask is 255, we consider it colored
                             color_state = colorNum + 1  # +1 because colorNum is zero-based, but color_state zero is Off
-                    self.chessboardState[x, y] = color_state
+                    self.states[x, y] = color_state
 
                 except IndexError:
                     # if an error occurs due to invalid coordinates, just don't change the color_state
                     pass
 
         # dissect the board into the four 16-step sequences (two rows for each sequence of 16 steps)
-        seq1 = np.concatenate((self.chessboardState[:, 0], self.chessboardState[:, 1]))
-        seq2 = np.concatenate((self.chessboardState[:, 2], self.chessboardState[:, 3]))
-        seq3 = np.concatenate((self.chessboardState[:, 4], self.chessboardState[:, 5]))
-        seq4 = np.concatenate((self.chessboardState[:, 6], self.chessboardState[:, 7]))
+        seq1 = np.concatenate((self.states[:,0], self.states[:,1]))
+        seq2 = np.concatenate((self.states[:,2], self.states[:,3]))
+        seq3 = np.concatenate((self.states[:,4], self.states[:,5]))
+        seq4 = np.concatenate((self.states[:,6], self.states[:,7]))
         return (seq1, seq2, seq3, seq4)
-
 
     def printColors(self, j, i):
         aoiHalfWidth = 2
         areaOfInterest = self.frame[self.grid[j, i, 1]-aoiHalfWidth:self.grid[j, i, 1]+aoiHalfWidth, self.grid[j, i, 0]-aoiHalfWidth:self.grid[j, i, 0]+aoiHalfWidth]        
         print(areaOfInterest)
 
+        # for colorNum, (lower, upper) in enumerate(self.colorBoundaries):
+        #     mask = cv2.inRange(areaOfInterest, lower, upper)  # returns binary mask: pixels which fall in the range are white (255), others black (0)
+        #     print(mask)
 
     def setRange(self, colorIndex, j, i):
         aoiHalfWidth = 2
@@ -164,14 +196,19 @@ class ChessCam:
         lowerColor = np.clip(meanColor - 20, 0, 255).astype(np.uint8)
         upperColor = np.clip(meanColor + 20, 0, 255).astype(np.uint8)
 
+        # print(lowerColor)
+        # print(upperColor)
+
         self.colorBoundaries[colorIndex] = [lowerColor, upperColor]
 
 
+    def quit(self):
+        # When everything done, release the capture
+        self.cam.release()
+        cv2.destroyAllWindows()
         
     def save_calibrated(self):
         np.save('colors.yamama', self.colorBoundaries)
-
-
     def load_calibrated(self):
         try:
             self.colorBoundaries = np.load('colors.yamama')
@@ -179,15 +216,14 @@ class ChessCam:
             print("No file detected for color values")
 
 
-    def quit(self):
-        # When everything done, release the capture
-        self.cap.release()
-        cv2.destroyAllWindows()
-
-
 if __name__=="__main__":
-    chesscam = ChessCam()
+    cam = ChessCam()
 
-    chesscam.update()
+    while not cam.grid_captured:
+        cam.update(True)
 
-    chesscam.quit()
+    cam.quit()
+
+
+
+
