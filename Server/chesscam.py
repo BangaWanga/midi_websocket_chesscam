@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from Server.track import Track
+import config
 
 
 class ChessCam:
@@ -58,14 +59,14 @@ class ChessCam:
         # apply moving average
         # this is important to get rid of image noise and make the boundaries between black and white wider
         # the latter leads to smaller white areas after thresholding (see below)
-        gray = cv2.blur(gray, (20,20))
+        gray = cv2.blur(gray, config.cam_white_areas)
 
         # threshold filter -> convert into 2-color image
         ret, dst = cv2.threshold(gray, 0.6 * gray.max(), 255, 0)
 
         # use unsigned int (0 .. 255)
         dst = np.uint8(dst)
-        
+
 
         # label connected components and calculate the centroids of each chess field
         ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst, 4)
@@ -107,10 +108,13 @@ class ChessCam:
 
         # Display the resulting frame
         cv2.imshow('computer visions', dst)
+        self.process_input_and_quit()
 
-        # if cv2.waitKey(1) & 0xFF == ord('q'):
-        #     break
 
+
+    def process_input_and_quit(self):
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            return
     def make_grid(self, centroids):
         # We assume that the field in the upper left corner is white
         # We should have 32 measured centroids in total (for the white fields)

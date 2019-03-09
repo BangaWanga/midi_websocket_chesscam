@@ -7,3 +7,8 @@ client_connection_local = 'wss://localhost:8765'
 midiout =10
 midiin =4
 clock=False
+
+
+#Chesscam config:
+
+cam_white_areas =(3,3) #Small number = small white areas
