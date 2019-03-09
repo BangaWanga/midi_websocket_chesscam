@@ -3,8 +3,10 @@ import concurrent.futures
 import json
 
 from sequencer import*
+import asyncio
 
 seq = step_sequencer()
+
 connected=False
 
 async def get_new_sequences():
