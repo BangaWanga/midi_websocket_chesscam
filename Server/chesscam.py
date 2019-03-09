@@ -18,7 +18,7 @@ class ChessCam:
         self.track = Track()
 
         self.capture_new_sequence = False #Flag for new sequences
-        self.send_new_sequence=False
+        self.new_sequence_captured=False
 
         # define color boundaries (lower, upper) (in RGB, since we always flip the frame)
         self.colorBoundaries = [
@@ -30,17 +30,17 @@ class ChessCam:
         print("Chesscam init finished")
 
     def run(self):
-        print("Chesscam run")
+
         #At first we need the grid 
-        while not self.grid_captured:
+        if not self.grid_captured:
             self.update(True)
         else:
-            self.update(False) # Why?
-            if (self.capture_new_sequence):
-                result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
-                if (result):
-                    self.send_new_sequence=True
-                    return self.track.sequences
+            self.update(False)
+
+            result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
+            if (result):
+                self.new_sequence_captured=True
+
 
 
     def update(self, updateGrid=True):
@@ -108,6 +108,7 @@ class ChessCam:
 
         # Display the resulting frame
         cv2.imshow('computer visions', dst)
+        #if (not self.grid_captured):
         self.process_input_and_quit()
 
 
@@ -173,7 +174,7 @@ class ChessCam:
                             color_state = colorNum + 1  # +1 because colorNum is zero-based, but color_state zero is Off
                     self.states[x, y] = color_state
 
-                except IndexError:
+                except (IndexError,cv2.error) as e:
                     # if an error occurs due to invalid coordinates, just don't change the color_state
                     pass
 

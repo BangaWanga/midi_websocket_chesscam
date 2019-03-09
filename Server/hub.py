@@ -43,11 +43,14 @@ class Hub:
                 break
     def chesscam(self):
 
-        self.cam.run()
-        if (self.cam.send_new_sequence):
-            self.new_sequence=self.cam.track.sequences
-            self.cam.send_new_sequence =False
-            self.flag_sequence=True
+        while not self.cam.new_sequence_captured:
+            self.cam.run()
+            if self.cam.grid_captured:
+
+                self.new_sequence=self.cam.track.sequences
+                self.cam.new_sequence_captured =False
+                self.flag_sequence=True
+                print(self.new_sequence)
         if self.cam.grid_captured: #So we know we can setup the server
             return True
 
