@@ -1,10 +1,12 @@
 import numpy as np
-from util.midi_IO import *
 import threading
-from Client.gui import Gui
-import sys
 from PyQt5.QtWidgets import QApplication
 
+# ugly increase the scope of imports
+import sys
+sys.path.append('../')
+from util.midi_IO import *
+from Client.gui import Gui
 
 class step_sequencer:
 

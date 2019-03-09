@@ -2,7 +2,7 @@ import websockets
 import concurrent.futures
 import json
 
-from Client.sequencer import*
+from sequencer import*
 
 seq = step_sequencer()
 connected=False
