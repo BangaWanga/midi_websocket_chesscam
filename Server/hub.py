@@ -7,7 +7,7 @@ import concurrent
 import json
 from Server.chesscam import ChessCam
 import asyncio
-
+import keyboard
 
 
 class Hub:
@@ -30,9 +30,12 @@ class Hub:
                     print(f"{answer}")
                     self.connected= True
                 else:
-                    self.cam.run()
-                    if (self.sequence_ready_to_send):
+                    self.cam.run() #Getting new pictures, could be flagged as well
 
+                    
+                    if self.cam.new_sequence_captured: #May change according to which device you want to control sending it with. Could be triggered by anything
+                        self.sequence_ready_to_send=True
+                    if self.sequence_ready_to_send:
                         await websocket.send(json.dumps(self.new_sequence.tolist()))
                         self.sequence_ready_to_send=False
                         print(f"New Sequence has been sent")

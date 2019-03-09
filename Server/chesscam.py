@@ -29,17 +29,18 @@ class ChessCam:
         self.states = np.zeros(self.grid.shape[:2], dtype=np.int)   # array that holds a persistent state of the chessboard
         print("Chesscam init finished")
 
-    def run(self):
+    def run(self, user_trigger=False):
 
         #At first we need the grid 
         if not self.grid_captured:
             self.update(True)
         else:
             self.update(False)
+            if (user_trigger):
+                result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
+                if (result):
+                    self.new_sequence_captured=True
 
-            result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
-            if (result):
-                self.new_sequence_captured=True
 
 
 

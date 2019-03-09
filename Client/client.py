@@ -1,7 +1,7 @@
 import websockets
 import concurrent.futures
 import json
-
+import numpy as np
 from sequencer import*
 import asyncio
 
