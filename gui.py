@@ -17,6 +17,7 @@ class Gui(QWidget):
         self.chess_fields_set = False
         self.notch = 0  # -1, 0 or 1
         self.initUI()
+        self.step =0
 
         #self.showMaximized()
 
@@ -64,8 +65,6 @@ class Gui(QWidget):
                     self.set_color(line, row, "Black")
 
     def draw_sequence(self, sequences):
-
-
         self.draw_chess_board() # first we have to reset the whole Chessboard
         for i, seq in enumerate(sequences):
             #print(f"Vars are i: {i}, seq {seq} and sequences {sequences}")
@@ -75,11 +74,8 @@ class Gui(QWidget):
                     if i %3==0:
                         col = "Red"
                     elif i %3==1:
-
                         col = "Green"
-
                     else:
-
                         col = "Blue"
                     line = int(i/3)*2
                     if j>=8:
@@ -107,6 +103,10 @@ class Gui(QWidget):
             self.col.setGreen(0)
             self.col.setRed(0)
             self.col.setBlue(0)
+        elif color == "Weid":
+            self.col.setGreen(50)
+            self.col.setRed(150)
+            self.col.setBlue(75)
         else:
             self.col.setBlue(val)
             self.col.setGreen(0)
@@ -133,7 +133,12 @@ class Gui(QWidget):
         if pressed:
             self.seq_running = False
 
-
+    def step(self, step):
+        line =0
+        if step >7:
+            line +=1
+        for i in range(4):
+            self.set_color(line+i, step%8, "Weird")
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = Gui()

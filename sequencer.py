@@ -23,8 +23,8 @@ class step_sequencer:
 
         app = QApplication(sys.argv)
         self.gui = Gui()
-
         app.exec()
+        
 
     def run_threaded(self):
         thread = threading.Thread(target=self.run_gui)
@@ -54,17 +54,11 @@ class step_sequencer:
     def play(self):
 
         velocity = 100
-
         self.step =self.midi_io.step
-
-        # create timestamp for this step with an option of a random delay
-        currentTimeInMs = pygame.midi.time()
-
-        
-        self.last_step = self.midi_io.get_midi_time()
+        #self.gui.step(self.step)
         #ToDo: Check if necessary to save var two times
-        timestamp = self.last_step
-        #timestamp = self.last_step
+        timestamp = self.midi_io.get_midi_time()
+
 
         # loop through the sequences and create the MIDI events of this step
         midiEvents = []  # collect them in this list, then send all at once
