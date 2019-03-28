@@ -31,3 +31,5 @@ python setup.py
 ## Aufbau
 
 Ableton <-> Client  <-> Server <- Chesscam
+
+Ausführen mit: save_run_app.py
