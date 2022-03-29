@@ -27,7 +27,8 @@ Die Sequenz wird dann Step für Step durchgegangen und für jeden aktiven Step w
 
 Alle Abhängigkeiten können mit der setup.py installiert werden.
 ```
-python setup.py
+python setup.py build
+python setup.py install
 ```
 
 ## Aufbau
