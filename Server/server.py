@@ -1,29 +1,24 @@
-#!/usr/bin/env python
+from flask import Flask, redirect
+from Server import chesscam
+from hub import Hub
 
-# WS server example
-from Server.hub_alt import *
-import websockets
-import asyncio
-
+app = Flask(__name__)
 
 hub = Hub()
-hub.chesscam()
 
 
-def custom_exception_handler(loop, context):
-    # first, handle with default handler
-    loop.default_exception_handler(context)
-
-    exception = context.get('exception')
-
-    print(context)
-    loop.stop()
+@app.route("/")
+def index():
+    hub.start()
+    return "Chesscam!!!"
 
 
-loop = asyncio.get_event_loop()
-loop.set_exception_handler(custom_exception_handler)
-start_server = websockets.serve(hub.handler, 'localhost', 8765, ping_interval=70)
+@app.route("/get_chessboard")
+def get_chessboard():
+    chess_state = hub.chessboard_state.tolist()
+    print("State! ", chess_state, type(chess_state))
+    return {"chessboard": chess_state}
 
 
-loop.run_until_complete(start_server)
-loop.run_forever()
+if __name__ == "__main__":
+    app.run(debug=True)

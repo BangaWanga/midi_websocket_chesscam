@@ -10,7 +10,8 @@ class ChessCam:
         self.grid = np.zeros((8, 8, 2), dtype=np.int32)
         self.cam = cv2.VideoCapture(0)
         ret, self.frame = self.cam.read()
-
+        print("Chesscam init")
+        print(self.frame.shape)
         self.frame = np.flip(self.frame, axis=1)    # ToDo: What is happening here?
         self.frame = np.flip(self.frame, axis=2)
         self.grid_captured = False
@@ -18,7 +19,7 @@ class ChessCam:
         self.track = Track()
 
         self.capture_new_sequence = False #Flag for new sequences
-        self.new_sequence_captured=False
+        self.new_sequence_captured = False
 
         # define color boundaries (lower, upper) (in RGB, since we always flip the frame)
         self.colorBoundaries = config.colorBoundaries
@@ -31,9 +32,8 @@ class ChessCam:
         if not self.grid_captured:
             self.update(updateGrid=True)
         else:
-
             self.update(updateGrid=False)
-            if (user_trigger):
+            if user_trigger:    # ToDo: Do we really need user_trigger?
                 result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
                 if result:
                     self.new_sequence_captured = True

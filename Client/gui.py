@@ -8,8 +8,8 @@ from PyQt5.QtCore import *
 import sys
 
 
-
 font = QFont("Times", 15, QFont.Bold)
+
 
 class Gui(QWidget):
     def __init__(self):
@@ -38,19 +38,17 @@ class Gui(QWidget):
 
         notch_up.clicked[bool].connect(self.notch_func)
 
-        notch_down= QPushButton('NOTCH -', self)
+        notch_down = QPushButton('NOTCH -', self)
         notch_down.setCheckable(True)
         notch_down.move(10, 60)
 
         notch_down.clicked[bool].connect(self.notch_func)
-
-
-
         self.squares =[[QFrame(self) for i in range (8)] for i in range(8)]
         self.draw_chess_board()
         self.setGeometry(500, 500, 280, 170)
         self.setWindowTitle('Toggle button')
         self.show()
+
     def show_log(self, msg):
         self.log.setText(msg)
 

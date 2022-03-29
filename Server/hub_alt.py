@@ -67,7 +67,7 @@ class Hub:
             if self.cam.grid_captured:
                 self.new_sequence = self.cam.track.sequences
                 self.sequence_ready_to_send = True
-                return True #we can open the server now
+                return True     # we can open the server now
 
 
 if __name__ == "__main__":
