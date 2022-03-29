@@ -7,11 +7,11 @@ import config
 class ChessCam:
 
     def __init__(self):
-        self.grid = np.zeros((8, 8, 2), dtype=np.int)
+        self.grid = np.zeros((8, 8, 2), dtype=np.int32)
         self.cam = cv2.VideoCapture(0)
         ret, self.frame = self.cam.read()
 
-        self.frame = np.flip(self.frame, axis=1)
+        self.frame = np.flip(self.frame, axis=1)    # ToDo: What is happening here?
         self.frame = np.flip(self.frame, axis=2)
         self.grid_captured = False
 
@@ -22,7 +22,7 @@ class ChessCam:
 
         # define color boundaries (lower, upper) (in RGB, since we always flip the frame)
         self.colorBoundaries = config.colorBoundaries
-        self.states = np.zeros(self.grid.shape[:2], dtype=np.int)   # array that holds a persistent state of the chessboard
+        self.states = np.zeros(self.grid.shape[:2], dtype=np.int32)   # array that holds a persistent state of the chessboard
         print("Chesscam init finished")
 
     def run(self, user_trigger=False):
@@ -35,15 +35,12 @@ class ChessCam:
             self.update(updateGrid=False)
             if (user_trigger):
                 result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
-                if (result):
-                    self.new_sequence_captured=True
+                if result:
+                    self.new_sequence_captured = True
                 else:
                     print("no change")
 
-
-
-
-    def update(self, updateGrid=True):
+    def update(self, updateGrid = True):
 
         # capture a frame from the video stream
         ret, self.frame = self.cam.read()
@@ -96,26 +93,24 @@ class ChessCam:
             # Write coordinates to the screen
             for i in range(8):
                 for j in range(8):
-                    isBlackField = ((i%2 == 0) and (j%2 == 1)) or ((i%2 == 1) and (j%2 == 0))
+                    isBlackField = ((i % 2 == 0) and (j % 2 == 1)) or ((i % 2 == 1) and (j % 2 == 0))
                     c = (255*isBlackField, 255*isBlackField, 255*isBlackField)
                     cv2.putText(dst, "({0}, {1})".format(i, j), tuple(self.grid[i, j]), fontScale=0.2,
                                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                                 color=c)
-        except:
-
+        except Exception as _e:
+            print(_e)
             pass  # We don't care. Just do nothing.
-            #print('fuck this shit')
 
         # Display the resulting frame
         cv2.imshow('computer visions', dst)
         #if (not self.grid_captured):
         self.process_input_and_quit()
 
-
-
     def process_input_and_quit(self):
         if cv2.waitKey(1) & 0xFF == ord('q'):
             return
+
     def make_grid(self, centroids):
         # We assume that the field in the upper left corner is white
         # We should have 32 measured centroids in total (for the white fields)
@@ -145,18 +140,18 @@ class ChessCam:
                 self.grid[7, y] = self.grid[6, y] + (self.grid[6, y] - self.grid[5, y])  # get rightmost (pos. 7) black field by adding the vector pointing from the black field at pos. 5 to the white field at pos. 6 to the pos. of the white field at pos. 6
 
         # Cast all the coordinates to int (effectively applying the floor function) to yield actual pixel coordinates
-        self.grid = self.grid.astype(np.int)
+        self.grid = self.grid.astype(np.int32)
+        self.grid = self.grid.astype(np.int32)
         self.grid_captured = True
         print("Grid Captured.")
 
     def gridToState(self):
-        #print("Making a new color_state")
 
         # tolerance = 80
         aoiHalfWidth = 5  # half width in pixels of the square area of interest around the centroids
         colored_threshold = 50  # threshold for detecting if a field is colored (measured values are between 0 and 255)
 
-        self.grid = self.grid.astype(np.int)
+        self.grid = self.grid.astype(np.int32)
         # states = np.zeros(self.grid.shape[:2], dtype=np.int)
         for y in range(8):  # loop over y-coordinate
             for x in range(8):  # loop over y-coordinate
@@ -180,11 +175,8 @@ class ChessCam:
                     pass
 
         # dissect the board into the four 16-step sequences (two rows for each sequence of 16 steps)
-        seq1 = np.concatenate((self.states[:,0], self.states[:,1]))
-        seq2 = np.concatenate((self.states[:,2], self.states[:,3]))
-        seq3 = np.concatenate((self.states[:,4], self.states[:,5]))
-        seq4 = np.concatenate((self.states[:,6], self.states[:,7]))
-        return (seq1, seq2, seq3, seq4)
+        print("states Shape: ", self.states.shape)
+        return self.states
 
     def printColors(self, j, i):
         aoiHalfWidth = 2
@@ -207,7 +199,6 @@ class ChessCam:
 
         self.colorBoundaries[colorIndex] = [lowerColor, upperColor]
 
-
     def quit(self):
         # When everything done, release the capture
         self.cam.release()
@@ -215,17 +206,18 @@ class ChessCam:
         
     def save_calibrated(self):
         np.save('colors.yamama', self.colorBoundaries)
+
     def load_calibrated(self):
         try:
             self.colorBoundaries = np.load('colors.yamama')
-        except:
+        except Exception as _e:
             print("No file detected for color values")
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     cam = ChessCam()
 
     while not cam.grid_captured:
         cam.update(True)
-
+    cam.gridToState()
     cam.quit()

@@ -6,8 +6,6 @@ from Client.sequencer import *
 import asyncio
 
 
-
-
 class Client:
     def __init__(self):
         self.seq = step_sequencer()

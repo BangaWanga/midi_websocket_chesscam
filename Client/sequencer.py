@@ -8,6 +8,7 @@ sys.path.append('../')
 from util.midi_IO import *
 from Client.gui import Gui
 
+
 class step_sequencer:
 
     def __init__(self):
@@ -15,17 +16,13 @@ class step_sequencer:
         self.step =0 #0...16
         self.sequences = np.zeros((12, 16), dtype=np.int)
         self.gui = None
-
-
         self.midi_io = midi_IO()
-
 
     def run_gui(self):
 
         app = QApplication(sys.argv)
         self.gui = Gui()
         app.exec()
-
 
     def run_threaded(self):
         thread = threading.Thread(target=self.run_gui)
@@ -37,7 +34,6 @@ class step_sequencer:
         thread.start()
         thread1.start()
 
-
     def run(self):
         print("Setting up guy...")
         while self.gui == None:
@@ -45,17 +41,17 @@ class step_sequencer:
 
         while True:
             #check if notch has been activated in gui
-            if (self.gui.notch !=0):
+            if self.gui.notch !=0:
                 self.midi_io.clockTicks += self.gui.notch
                 self.gui.notch = 0
             curr_step = self.midi_io.clock()
-            if (curr_step!= self.step):
+            if curr_step!= self.step:
                 self.play()
         self.midi_io.quit()
-    def play(self):
 
+    def play(self):
         velocity = 100
-        self.step =self.midi_io.step
+        self.step = self.midi_io.step
         #self.gui.step(self.step)
         #ToDo: Check if necessary to save var two times
         timestamp = self.midi_io.get_midi_time()
@@ -71,6 +67,7 @@ class step_sequencer:
                 midiEvents.append([[0x90, 36 + i, velocity], timestamp])  # note on, if a 1 is set in the respective sequence
                 # self.midiOut.note_on(36 + i, velocity)
         self.midi_io.write_midi(midiEvents)  # write the events to the MIDI output port
+
     def set_new_sequence(self, sequence):
         if self.gui == None:
             return

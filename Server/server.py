@@ -6,10 +6,7 @@ import websockets
 import asyncio
 
 
-
-hub=Hub()
-
-
+hub = Hub()
 hub.chesscam()
 
 
@@ -26,8 +23,6 @@ def custom_exception_handler(loop, context):
 loop = asyncio.get_event_loop()
 loop.set_exception_handler(custom_exception_handler)
 start_server = websockets.serve(hub.handler, 'localhost', 8765, ping_interval=70)
-
-
 
 
 loop.run_until_complete(start_server)
