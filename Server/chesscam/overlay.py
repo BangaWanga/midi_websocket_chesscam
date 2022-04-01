@@ -1,5 +1,5 @@
 import cv2
-import np as np
+import numpy as np
 
 
 class Overlay:
