@@ -3,7 +3,6 @@ import numpy as np
 
 
 class ChessCam:
-
     def __init__(self):
         self.grid = np.zeros((8, 8, 2), dtype=np.int32)
         self.cam = cv2.VideoCapture(0)
@@ -12,8 +11,6 @@ class ChessCam:
         self.frame_shape = self.frame.shape
 
         self.grid_captured = False
-
-        #self.track = Track()
 
         self.capture_new_sequence = False #Flag for new sequences
         self.new_sequence_captured = False
@@ -28,22 +25,17 @@ class ChessCam:
         print("Chesscam init finished")
 
     def run(self, user_trigger=False):
-
         #At first we need the grid
         if not self.grid_captured:
             self.update(updateGrid=True)
         else:
             self.update(updateGrid=False)
-            if user_trigger:    # ToDo: Do we really need user_trigger?
+            if user_trigger:
+                # ToDo: Do we really need user_trigger?
                 pass # actually this is the beat capturing
-                #result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
-                #if result:
-                #    self.new_sequence_captured = True
-                #else:
-                #    print("no change")
+
 
     def update_frame(self):
-
         # capture a frame from the video stream
         ret, self.frame = self.cam.read()
         if ret:
@@ -54,7 +46,6 @@ class ChessCam:
             raise ValueError("Can't read frame")
 
     def update(self, updateGrid = True):
-
         self.update_frame()
         gray_scaled = self.apply_gray_filter(self.frame)
         img = self.frame
@@ -77,7 +68,6 @@ class ChessCam:
         # This is to be able to assign the centroids to actual chessboard fields
         # In the physical setup need to make sure that the board axes are quite parallel to the image borders for this to work
         # Trapezoidal tilting should be no problem though
-        #centroids = np.flip(centroids.astype(np.int), axis=1)
         # This sorts them row-wise from top to bottom (with increasing y-coordinate), but unordered x-coordinate
         centroids = centroids[np.argsort(centroids[:,1])]
         if updateGrid:
@@ -94,10 +84,10 @@ class ChessCam:
         # add rectangle
         #self.draw_rectangle(gray_scaled)
         #img = self.draw_line(img, start=(0, 0), end=self.frame_shape[:2])
+
         img = self.draw_grid(img)
         # Display the resulting frame
         cv2.imshow('computer visions', img)
-        #if (not self.grid_captured):
         self.process_input_and_quit()
 
     def update_centroid_labels(self, img):
@@ -110,7 +100,6 @@ class ChessCam:
                             color=c)
 
     def apply_gray_filter(self, img, white_areas=(5, 5)):   # Small number = small white areas
-        # gray filter
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = np.float32(gray)
 
@@ -121,10 +110,7 @@ class ChessCam:
 
         # threshold filter -> convert into 2-color image
         ret, dst = cv2.threshold(gray, 0.6 * gray.max(), 255, 0)
-
-        # use unsigned int (0 .. 255)
         dst = np.uint8(dst)
-        #print(dst.shape, dst)
 
         return dst
 
@@ -232,19 +218,12 @@ class ChessCam:
         areaOfInterest = self.frame[self.grid[j, i, 1]-aoiHalfWidth:self.grid[j, i, 1]+aoiHalfWidth, self.grid[j, i, 0]-aoiHalfWidth:self.grid[j, i, 0]+aoiHalfWidth]
         print(areaOfInterest)
 
-        # for colorNum, (lower, upper) in enumerate(self.colorBoundaries):
-        #     mask = cv2.inRange(areaOfInterest, lower, upper)  # returns binary mask: pixels which fall in the range are white (255), others black (0)
-        #     print(mask)
-
     def setRange(self, colorIndex, j, i):
         aoiHalfWidth = 2
         areaOfInterest = self.frame[self.grid[j, i, 1]-aoiHalfWidth:self.grid[j, i, 1]+aoiHalfWidth, self.grid[j, i, 0]-aoiHalfWidth:self.grid[j, i, 0]+aoiHalfWidth]
         meanColor = np.mean(np.mean(areaOfInterest, axis=0), axis=0)
         lowerColor = np.clip(meanColor - 20, 0, 255).astype(np.uint8)
         upperColor = np.clip(meanColor + 20, 0, 255).astype(np.uint8)
-
-        # print(lowerColor)
-        # print(upperColor)
 
         self.colorBoundaries[colorIndex] = [lowerColor, upperColor]
 
