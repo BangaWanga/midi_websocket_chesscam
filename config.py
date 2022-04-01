@@ -14,11 +14,11 @@ client_connection_local = 'wss://localhost:8765'
 midiout =10
 midiin =4
 clock=False
+cam_white_areas =(5,5) #Small number = small white areas
 
 
 #Chesscam config:
 
-cam_white_areas =(5,5) #Small number = small white areas
 colorBoundaries= [
             [np.array([10, 10, 10]), np.array([255, 56, 50])], # red
             [np.array([0, 70, 5]), np.array([50, 200, 50])],   # green

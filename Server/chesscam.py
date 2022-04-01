@@ -1,7 +1,5 @@
 import cv2
 import numpy as np
-from Server.track import Track
-import config
 
 
 class ChessCam:
@@ -15,29 +13,34 @@ class ChessCam:
 
         self.grid_captured = False
 
-        self.track = Track()
+        #self.track = Track()
 
         self.capture_new_sequence = False #Flag for new sequences
         self.new_sequence_captured = False
 
         # define color boundaries (lower, upper) (in RGB, since we always flip the frame)
-        self.colorBoundaries = config.colorBoundaries
+        self.colorBoundaries = [
+            [np.array([10, 10, 10]), np.array([255, 56, 50])],  # red
+            [np.array([0, 70, 5]), np.array([50, 200, 50])],   # green
+            [np.array([4, 31, 86]), np.array([50, 88, 220])]    # blue
+        ]
         self.states = np.zeros(self.grid.shape[:2], dtype=np.int32)   # array that holds a persistent state of the chessboard
         print("Chesscam init finished")
 
     def run(self, user_trigger=False):
 
-        #At first we need the grid 
+        #At first we need the grid
         if not self.grid_captured:
             self.update(updateGrid=True)
         else:
             self.update(updateGrid=False)
             if user_trigger:    # ToDo: Do we really need user_trigger?
-                result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
-                if result:
-                    self.new_sequence_captured = True
-                else:
-                    print("no change")
+                pass # actually this is the beat capturing
+                #result = self.track.update(self.gridToState()) #Funktion returns true if new sequence differs from old
+                #if result:
+                #    self.new_sequence_captured = True
+                #else:
+                #    print("no change")
 
     def update_frame(self):
 
@@ -89,9 +92,9 @@ class ChessCam:
         self.update_centroid_labels(gray_scaled)
 
         # add rectangle
-        self.draw_rectangle(gray_scaled)
-        img = self.draw_line(img, start=(0, 0), end=self.frame_shape[:2])
-
+        #self.draw_rectangle(gray_scaled)
+        #img = self.draw_line(img, start=(0, 0), end=self.frame_shape[:2])
+        img = self.draw_grid(img)
         # Display the resulting frame
         cv2.imshow('computer visions', img)
         #if (not self.grid_captured):
@@ -106,7 +109,7 @@ class ChessCam:
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                             color=c)
 
-    def apply_gray_filter(self, img):
+    def apply_gray_filter(self, img, white_areas=(5, 5)):   # Small number = small white areas
         # gray filter
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = np.float32(gray)
@@ -114,7 +117,7 @@ class ChessCam:
         # apply moving average
         # this is important to get rid of image noise and make the boundaries between black and white wider
         # the latter leads to smaller white areas after thresholding (see below)
-        gray = cv2.blur(gray, config.cam_white_areas)
+        gray = cv2.blur(gray, white_areas)
 
         # threshold filter -> convert into 2-color image
         ret, dst = cv2.threshold(gray, 0.6 * gray.max(), 255, 0)
@@ -122,23 +125,33 @@ class ChessCam:
         # use unsigned int (0 .. 255)
         dst = np.uint8(dst)
         #print(dst.shape, dst)
-        return dst
 
-    def draw_grid(self):
-        pass
+        return dst
 
     def draw_rectangle(self, img, pts1=(0, 0), pts2=(100, 100)):
         cv2.rectangle(img, pts1, pts2,
                       color=(0, 0, 0), thickness=3)
 
-    def draw_grid(self, img, offset=(0, 0)):
-        start_positions = list(zip(np.zeros(9, dtype=int), (np.arange(9) * self.frame_shape[0] / 9).astype(int)))
-        start_positions = start_positions + list(zip((np.arange(9) * self.frame_shape[0] / 9).astype(int), np.zeros(9, dtype=int)))
-        print(start_positions)
-        end_positions = [pos for pos in start_positions]
+    def draw_grid(self, img, offset=(0, 0), scale=0.5):
+        lines = 8
+        width = int(self.frame_shape[0] * scale)
+        height = int(self.frame_shape[1] * scale)
+        start_positions_horiontal = list(zip(np.zeros(lines, dtype=int), (np.arange(lines) * height / lines).astype(int)))
+        start_positions_vertical = list(zip((np.arange(lines) * height / lines).astype(int), np.zeros(lines, dtype=int)))
+
+        end_positions_horizontal = list(zip(np.ones(lines, dtype=int) * height, (np.arange(lines) * height / lines).astype(int)))
+        end_positions_vertical = list(zip((np.arange(lines) * height / lines).astype(int), np.ones(lines, dtype=int) * height))
+        print(self.frame_shape)
+        sp = start_positions_horiontal + start_positions_vertical + [(width, 0), (0, height)]
+        ep = end_positions_horizontal + end_positions_vertical + [(width, height), (width, height)]
+        print(sp)
+        print(ep)
+        for i in range(len(sp)):
+            img = self.draw_line(img, sp[i], ep[i])
+        return img
 
     def draw_line(self, img, start=(0, 0), end=(100, 100), line_thickness=2, col=(0, 255, 0)):
-        print(f"Draw line Img shape {img.shape}, start={start}, end={end}")
+        #print(f"Draw line Img shape {img.shape}, start={start}, end={end}")
         img = img.copy()
         cv2.line(img, start, end, col, thickness=line_thickness)
         return img
@@ -206,7 +219,7 @@ class ChessCam:
                             color_state = colorNum + 1  # +1 because colorNum is zero-based, but color_state zero is Off
                     self.states[x, y] = color_state
 
-                except (IndexError,cv2.error) as e:
+                except (IndexError, cv2.error) as e:
                     # if an error occurs due to invalid coordinates, just don't change the color_state
                     pass
 
@@ -216,7 +229,7 @@ class ChessCam:
 
     def printColors(self, j, i):
         aoiHalfWidth = 2
-        areaOfInterest = self.frame[self.grid[j, i, 1]-aoiHalfWidth:self.grid[j, i, 1]+aoiHalfWidth, self.grid[j, i, 0]-aoiHalfWidth:self.grid[j, i, 0]+aoiHalfWidth]        
+        areaOfInterest = self.frame[self.grid[j, i, 1]-aoiHalfWidth:self.grid[j, i, 1]+aoiHalfWidth, self.grid[j, i, 0]-aoiHalfWidth:self.grid[j, i, 0]+aoiHalfWidth]
         print(areaOfInterest)
 
         # for colorNum, (lower, upper) in enumerate(self.colorBoundaries):
@@ -239,7 +252,7 @@ class ChessCam:
         # When everything done, release the capture
         self.cam.release()
         cv2.destroyAllWindows()
-        
+
     def save_calibrated(self):
         np.save('colors.yamama', self.colorBoundaries)
 
