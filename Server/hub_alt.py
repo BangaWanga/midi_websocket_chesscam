@@ -3,9 +3,8 @@
 # WS server example
 
 import websockets
-import concurrent
 import json
-from Server.chesscam import ChessCam
+from Server.chesscam.chesscam import ChessCam
 import asyncio
 import config
 

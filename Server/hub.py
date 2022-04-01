@@ -1,7 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 import time
 import atexit
-from Server.chesscam import ChessCam
+from Server.chesscam.chesscam import ChessCam
 
 
 class Hub:

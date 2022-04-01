@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 
-from Server.camera import Camera
-from Server.overlay import Overlay
+from Server.chesscam.camera import Camera
+from Server.chesscam.overlay import Overlay
 
 
 class ChessCam:
