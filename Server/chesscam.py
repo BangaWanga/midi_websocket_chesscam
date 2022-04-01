@@ -9,11 +9,10 @@ class ChessCam:
     def __init__(self):
         self.grid = np.zeros((8, 8, 2), dtype=np.int32)
         self.cam = cv2.VideoCapture(0)
-        ret, self.frame = self.cam.read()
-        print("Chesscam init")
-        print(self.frame.shape)
-        self.frame = np.flip(self.frame, axis=1)    # ToDo: What is happening here?
-        self.frame = np.flip(self.frame, axis=2)
+
+        self.update_frame()
+        self.frame_shape = self.frame.shape
+
         self.grid_captured = False
 
         self.track = Track()
@@ -40,17 +39,76 @@ class ChessCam:
                 else:
                     print("no change")
 
-    def update(self, updateGrid = True):
+    def update_frame(self):
 
         # capture a frame from the video stream
         ret, self.frame = self.cam.read()
+        if ret:
+            # flip it since conventions in cv2 are the other way round
+            self.frame = np.flip(self.frame, axis=1)
+            self.frame = np.flip(self.frame, axis=2)
+        else:
+            raise ValueError("Can't read frame")
 
-        # flip it since conventions in cv2 are the other way round
-        self.frame = np.flip(self.frame, axis=1)
-        self.frame = np.flip(self.frame, axis=2)
+    def update(self, updateGrid = True):
 
+        self.update_frame()
+        gray_scaled = self.apply_gray_filter(self.frame)
+        img = self.frame
+
+        # label connected components and calculate the centroids of each chess field
+        ret, labels, stats, centroids = cv2.connectedComponentsWithStats(gray_scaled, 4)
+
+        # find the labels of the black components
+        # in the end, we want only the white fields
+        # also, this helps to remove the big parasitic component which is basically the whole black background with centroid in the middle of the screen
+        blackLabels = []
+        for label in range(len(centroids)):
+            lblIndices = np.where(labels == label)
+            if gray_scaled[lblIndices][0] == 0:
+                blackLabels.append(label)
+        # remove all the centroids of the black components for further processing
+        centroids = np.delete(centroids, blackLabels, axis=0)
+
+        # Sorting and rearranging centroids
+        # This is to be able to assign the centroids to actual chessboard fields
+        # In the physical setup need to make sure that the board axes are quite parallel to the image borders for this to work
+        # Trapezoidal tilting should be no problem though
+        #centroids = np.flip(centroids.astype(np.int), axis=1)
+        # This sorts them row-wise from top to bottom (with increasing y-coordinate), but unordered x-coordinate
+        centroids = centroids[np.argsort(centroids[:,1])]
+        if updateGrid:
+            try:
+                self.grid = self.make_grid(centroids)
+                self.grid_captured = True
+                print("Grid Captured.")
+            except ValueError as e:
+                print(e)
+
+        # Write coordinates to the screen
+        self.update_centroid_labels(gray_scaled)
+
+        # add rectangle
+        self.draw_rectangle(gray_scaled)
+        img = self.draw_line(img, start=(0, 0), end=self.frame_shape[:2])
+
+        # Display the resulting frame
+        cv2.imshow('computer visions', img)
+        #if (not self.grid_captured):
+        self.process_input_and_quit()
+
+    def update_centroid_labels(self, img):
+        for i in range(8):
+            for j in range(8):
+                isBlackField = ((i % 2 == 0) and (j % 2 == 1)) or ((i % 2 == 1) and (j % 2 == 0))
+                c = (255 * isBlackField, 255 * isBlackField, 255 * isBlackField)
+                cv2.putText(img, "({0}, {1})".format(i, j), tuple(self.grid[i, j]), fontScale=0.2,
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            color=c)
+
+    def apply_gray_filter(self, img):
         # gray filter
-        gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = np.float32(gray)
 
         # apply moving average
@@ -63,49 +121,27 @@ class ChessCam:
 
         # use unsigned int (0 .. 255)
         dst = np.uint8(dst)
+        #print(dst.shape, dst)
+        return dst
 
+    def draw_grid(self):
+        pass
 
-        # label connected components and calculate the centroids of each chess field
-        ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst, 4)
+    def draw_rectangle(self, img, pts1=(0, 0), pts2=(100, 100)):
+        cv2.rectangle(img, pts1, pts2,
+                      color=(0, 0, 0), thickness=3)
 
-        # find the labels of the black components
-        # in the end, we want only the white fields
-        # also, this helps to remove the big parasitic component which is basically the whole black background with centroid in the middle of the screen
-        blackLabels = []
-        for label in range(len(centroids)):
-            lblIndices = np.where(labels == label)
-            if dst[lblIndices][0] == 0:
-                blackLabels.append(label)
-        # remove all the centroids of the black components for further processing
-        centroids = np.delete(centroids, blackLabels, axis=0)
+    def draw_grid(self, img, offset=(0, 0)):
+        start_positions = list(zip(np.zeros(9, dtype=int), (np.arange(9) * self.frame_shape[0] / 9).astype(int)))
+        start_positions = start_positions + list(zip((np.arange(9) * self.frame_shape[0] / 9).astype(int), np.zeros(9, dtype=int)))
+        print(start_positions)
+        end_positions = [pos for pos in start_positions]
 
-        # Sorting and rearranging centroids
-        # This is to be able to assign the centroids to actual chessboard fields
-        # In the physical setup need to make sure that the board axes are quite parallel to the image borders for this to work
-        # Trapezoidal tilting should be no problem though
-        #centroids = np.flip(centroids.astype(np.int), axis=1)
-        # This sorts them row-wise from top to bottom (with increasing y-coordinate), but unordered x-coordinate
-        centroids = centroids[np.argsort(centroids[:,1])]
-        try:
-            if updateGrid:
-
-                self.make_grid(centroids)
-            # Write coordinates to the screen
-            for i in range(8):
-                for j in range(8):
-                    isBlackField = ((i % 2 == 0) and (j % 2 == 1)) or ((i % 2 == 1) and (j % 2 == 0))
-                    c = (255*isBlackField, 255*isBlackField, 255*isBlackField)
-                    cv2.putText(dst, "({0}, {1})".format(i, j), tuple(self.grid[i, j]), fontScale=0.2,
-                                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                color=c)
-        except Exception as _e:
-            print(_e)
-            pass  # We don't care. Just do nothing.
-
-        # Display the resulting frame
-        cv2.imshow('computer visions', dst)
-        #if (not self.grid_captured):
-        self.process_input_and_quit()
+    def draw_line(self, img, start=(0, 0), end=(100, 100), line_thickness=2, col=(0, 255, 0)):
+        print(f"Draw line Img shape {img.shape}, start={start}, end={end}")
+        img = img.copy()
+        cv2.line(img, start, end, col, thickness=line_thickness)
+        return img
 
     def process_input_and_quit(self):
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -115,17 +151,18 @@ class ChessCam:
         # We assume that the field in the upper left corner is white
         # We should have 32 measured centroids in total (for the white fields)
         # The black ones have to be calculated from the white ones here
-
+        if centroids.shape[0] < 32:
+            raise ValueError("Grid needs 32 centroids")
         # Initialize the grid (8x8 array of 2-coordinate arrays)
-        self.grid = np.zeros((8,8,2))
+        grid = np.zeros((8, 8, 2))
 
         # Fill in the (measured) pixel coordinates of the white fields
         for y in range(8):
-            isodd = y%2
+            isodd = y % 2
             white_fields = centroids[y*4:y*4+4] # get the 4 centroids of row y
             white_fields = white_fields[np.argsort(white_fields[:, 0])]  # sort them by their x-coordinate
             for x in range(4):
-                self.grid[x*2 + isodd, y] = white_fields[x]  # have to shift the white field's x-index by 1 in the odd rows
+                grid[x*2 + isodd, y] = white_fields[x]  # have to shift the white field's x-index by 1 in the odd rows
 
         # Calculate black field pixel coordinates
         for y in range(8):
@@ -140,10 +177,9 @@ class ChessCam:
                 self.grid[7, y] = self.grid[6, y] + (self.grid[6, y] - self.grid[5, y])  # get rightmost (pos. 7) black field by adding the vector pointing from the black field at pos. 5 to the white field at pos. 6 to the pos. of the white field at pos. 6
 
         # Cast all the coordinates to int (effectively applying the floor function) to yield actual pixel coordinates
-        self.grid = self.grid.astype(np.int32)
-        self.grid = self.grid.astype(np.int32)
-        self.grid_captured = True
-        print("Grid Captured.")
+        grid = self.grid.astype(np.int32)
+        grid = self.grid.astype(np.int32)
+        return grid
 
     def gridToState(self):
 
@@ -219,5 +255,13 @@ if __name__ == "__main__":
 
     while not cam.grid_captured:
         cam.update(True)
+    i = 0
+    while True:
+        if i % 100 == 0:
+            print(i)
+        if i > 100:
+            break
+        cam.run(user_trigger=True)
+
     cam.gridToState()
     cam.quit()

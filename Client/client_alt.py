@@ -22,7 +22,7 @@ class Client:
                         if not self.connected:
                             await websocket.send(config.client_greeting)
                             msg = await websocket.recv()
-                            if msg==config.server_greeting:
+                            if msg == config.server_greeting:
                                 print(msg)
                                 self.connected = True
                         else:
