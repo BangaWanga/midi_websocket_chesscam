@@ -17,22 +17,35 @@ class Overlay:
 
     def draw_grid(self, img, offset=(0, 0), scale=0.5):
         lines = 8
-        width = int(self.frame_shape[0] * scale)
-        height = int(self.frame_shape[1] * scale)
-        start_positions_horiontal = list(
-            zip(np.zeros(lines, dtype=int), (np.arange(lines) * height / lines).astype(int)))
-        start_positions_vertical = list(
-            zip((np.arange(lines) * height / lines).astype(int), np.zeros(lines, dtype=int)))
+        width = int(self.frame_shape[0])
+        height = int(self.frame_shape[1])
 
-        end_positions_horizontal = list(
-            zip(np.ones(lines, dtype=int) * height, (np.arange(lines) * height / lines).astype(int)))
-        end_positions_vertical = list(
-            zip((np.arange(lines) * height / lines).astype(int), np.ones(lines, dtype=int) * height))
-        print(self.frame_shape)
-        sp = start_positions_horiontal + start_positions_vertical + [(width, 0), (0, height)]
-        ep = end_positions_horizontal + end_positions_vertical + [(width, height), (width, height)]
+        start_positions_horiontal = np.column_stack(((np.zeros(lines, dtype=int), (np.arange(lines) * height / lines + 1).astype(int))))
+        start_positions_vertical = np.column_stack(((np.arange(lines) * height / lines).astype(int), np.zeros(lines, dtype=int)))
+
+        end_positions_horizontal = np.column_stack((np.ones(lines, dtype=int) * height, (np.arange(lines) * height / lines).astype(int)))
+        end_positions_vertical = np.column_stack(((np.arange(lines) * width / lines).astype(int), np.ones(lines, dtype=int) * width))
+        sp = np.vstack((start_positions_horiontal, start_positions_vertical))
+        ep = np.vstack((end_positions_horizontal, end_positions_vertical))
+        sp = (sp * scale).astype(int)
+        ep = (ep * scale).astype(int)
+        sp[..., 0] = sp[..., 0] + offset[0]
+        ep[..., 0] = ep[..., 0] + offset[0]
+        sp[..., 1] = ep[..., 1] + offset[1]
+        ep[..., 1] = ep[..., 1] + offset[1]
+
+        print(sp.shape)
+        print(ep.shape)
+        sp = [tuple(pos) for pos in sp]
+        ep = [tuple(pos) for pos in ep]
         print(sp)
-        print(ep)
+        """
+        sp = [tuple(pos) for pos in start_positions_horiontal] + \
+             [tuple(pos) for pos in start_positions_vertical] + [(width, 0), (0, height)]
+        ep = [tuple(pos) for pos in end_positions_horizontal] + \
+             [tuple(pos) for pos in end_positions_vertical] + [(width, height), (width, height)]
+        """
         for i in range(len(sp)):
+            print("Positions: ", sp[i], ep[i])
             img = self.draw_line(img, sp[i], ep[i])
         return img

@@ -9,19 +9,12 @@ class ChessCam:
     def __init__(self):
         self.grid = np.zeros((8, 8, 2), dtype=np.int32)
 
-<<<<<<< HEAD
-        self.update_frame()
-        self.frame_shape = self.frame.shape[:2]
-        print("Frame shape: ", self.frame_shape)
-        self.grid_captured = False
-=======
         self.camera = Camera()
 
         self.frame = self.camera.capture_frame_from_videostream()
         self.frame_shape = self.frame.shape
 
         self.overlay = Overlay(self.frame_shape)
->>>>>>> 94ffcc7ab5c7a2b0cbfbbc8a95000ce038053000
 
         self.grid_captured = False
 
@@ -103,73 +96,6 @@ class ChessCam:
                 cv2.putText(img, "({0}, {1})".format(i, j), tuple(self.grid[i, j]), fontScale=0.2,
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                             color=c)
-
-<<<<<<< HEAD
-    def apply_gray_filter(self, img, white_areas=(5, 5)):   # Small number = small white areas
-        # gray filter
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        gray = np.float32(gray)
-
-        # apply moving average
-        # this is important to get rid of image noise and make the boundaries between black and white wider
-        # the latter leads to smaller white areas after thresholding (see below)
-        gray = cv2.blur(gray, white_areas)
-
-        # threshold filter -> convert into 2-color image
-        ret, dst = cv2.threshold(gray, 0.6 * gray.max(), 255, 0)
-
-        # use unsigned int (0 .. 255)
-        dst = np.uint8(dst)
-        #print(dst.shape, dst)
-
-        return dst
-
-    def draw_rectangle(self, img, pts1=(0, 0), pts2=(100, 100)):
-        cv2.rectangle(img, pts1, pts2,
-                      color=(0, 0, 0), thickness=3)
-
-    def draw_grid(self, img, offset=(0, 0), scale=0.5):
-        lines = 8
-        width = int(self.frame_shape[0])
-        height = int(self.frame_shape[1])
-
-        start_positions_horiontal = np.column_stack(((np.zeros(lines, dtype=int), (np.arange(lines) * height / lines + 1).astype(int))))
-        start_positions_vertical = np.column_stack(((np.arange(lines) * height / lines).astype(int), np.zeros(lines, dtype=int)))
-
-        end_positions_horizontal = np.column_stack((np.ones(lines, dtype=int) * height, (np.arange(lines) * height / lines).astype(int)))
-        end_positions_vertical = np.column_stack(((np.arange(lines) * width / lines).astype(int), np.ones(lines, dtype=int) * width))
-        sp = np.vstack((start_positions_horiontal, start_positions_vertical))
-        ep = np.vstack((end_positions_horizontal, end_positions_vertical))
-        sp = (sp * scale).astype(int)
-        ep = (ep * scale).astype(int)
-        sp[..., 0] = sp[..., 0] + offset[0]
-        ep[..., 0] = ep[..., 0] + offset[0]
-        sp[..., 1] = ep[..., 1] + offset[1]
-        ep[..., 1] = ep[..., 1] + offset[1]
-
-        print(sp.shape)
-        print(ep.shape)
-        sp = [tuple(pos) for pos in sp]
-        ep = [tuple(pos) for pos in ep]
-        print(sp)
-        """
-        sp = [tuple(pos) for pos in start_positions_horiontal] + \
-             [tuple(pos) for pos in start_positions_vertical] + [(width, 0), (0, height)]
-        ep = [tuple(pos) for pos in end_positions_horizontal] + \
-             [tuple(pos) for pos in end_positions_vertical] + [(width, height), (width, height)]
-        """
-        for i in range(len(sp)):
-            print("Positions: ", sp[i], ep[i])
-            img = self.draw_line(img, sp[i], ep[i])
-        return img
-
-    def draw_line(self, img, start=(0, 0), end=(100, 100), line_thickness=2, col=(0, 255, 0)):
-        #print(f"Draw line Img shape {img.shape}, start={start}, end={end}")
-        img = img.copy()
-        cv2.line(img, start, end, col, thickness=line_thickness)
-        return img
-=======
->>>>>>> 94ffcc7ab5c7a2b0cbfbbc8a95000ce038053000
 
     def process_input_and_quit(self):
         if cv2.waitKey(1) & 0xFF == ord('q'):
