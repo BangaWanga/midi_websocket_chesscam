@@ -8,7 +8,6 @@ class Overlay:
 
     def draw_line(self, img, start=(0, 0), end=(100, 100), line_thickness=2, col=(0, 255, 0)):
         img = img.copy()
-        import cv2
         cv2.line(img, start, end, col, thickness=line_thickness)
         return img
 
@@ -34,18 +33,9 @@ class Overlay:
         sp[..., 1] = ep[..., 1] + offset[1]
         ep[..., 1] = ep[..., 1] + offset[1]
 
-        print(sp.shape)
-        print(ep.shape)
         sp = [tuple(pos) for pos in sp]
         ep = [tuple(pos) for pos in ep]
-        print(sp)
-        """
-        sp = [tuple(pos) for pos in start_positions_horiontal] + \
-             [tuple(pos) for pos in start_positions_vertical] + [(width, 0), (0, height)]
-        ep = [tuple(pos) for pos in end_positions_horizontal] + \
-             [tuple(pos) for pos in end_positions_vertical] + [(width, height), (width, height)]
-        """
+
         for i in range(len(sp)):
-            print("Positions: ", sp[i], ep[i])
             img = self.draw_line(img, sp[i], ep[i])
         return img
