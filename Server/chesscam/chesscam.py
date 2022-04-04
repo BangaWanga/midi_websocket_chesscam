@@ -51,11 +51,12 @@ class ChessCam:
         img = self.overlay.draw_grid(self.frame)
         # Display the resulting frame
         cv2.imshow('computer visions', img)
-        self.process_input_and_quit()
+        self.process_key_input()
 
-    def process_input_and_quit(self):
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            return
+    def process_key_input(self):
+        key = cv2.waitKey(1)
+        if key == 113 or key == 27:
+            exit()
 
     def gridToState(self):
         aoiHalfWidth = 5  # half width in pixels of the square area of interest around the centroids

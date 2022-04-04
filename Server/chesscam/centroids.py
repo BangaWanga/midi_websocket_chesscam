@@ -29,7 +29,6 @@ class Centroids:
             try:
                 self.grid = self.make_grid(centroids)
                 self.grid_captured = True
-                print("Grid Captured.")
             except ValueError as e:
                 print(e)
         # Write coordinates to the screen
