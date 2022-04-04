@@ -45,11 +45,10 @@ class ChessCam:
     def update(self, updateGrid = True):
         self.frame = self.camera.capture_frame_from_videostream()
         gray_scaled = self.camera.apply_gray_filter(self.frame)
-        img = self.frame
 
         self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
 
-        img = self.overlay.draw_grid(img)
+        img = self.overlay.draw_grid(self.frame)
         # Display the resulting frame
         cv2.imshow('computer visions', img)
         self.process_input_and_quit()
@@ -70,10 +69,7 @@ class ChessCam:
                     # now loop through the colors to see if there is a significant amount of any
                     # At the end, color_state will always correspond to the last color that was found
                     for colorNum, (lower, upper) in enumerate(self.colorBoundaries):
-                        # define area of interest (square around field midpoint)
-                        lowerY, upperY = self.grid[x, y, 1] - aoiHalfWidth, self.grid[x, y, 1] + aoiHalfWidth
-                        lowerX, upperX = self.grid[x, y, 0] - aoiHalfWidth, self.grid[x, y, 0] + aoiHalfWidth
-                        areaOfInterest = self.frame[lowerY:upperY, lowerX:upperX]
+                        areaOfInterest = self.defineAreaOfInterest(aoiHalfWidth, x, y)
 
                         mask = cv2.inRange(areaOfInterest, lower, upper)  # returns binary mask: pixels which fall in the range are white (255), others black (0)
                         if np.mean(mask) > colored_threshold:  # if some significant amount of pixels in the mask is 255, we consider it colored
@@ -86,6 +82,14 @@ class ChessCam:
 
         # dissect the board into the four 16-step sequences (two rows for each sequence of 16 steps)
         return self.states
+
+    def defineAreaOfInterest(self, aoiHalfWidth, x, y):
+        # square around field midpoint
+
+        lowerY, upperY = self.grid[x, y, 1] - aoiHalfWidth, self.grid[x, y, 1] + aoiHalfWidth
+        lowerX, upperX = self.grid[x, y, 0] - aoiHalfWidth, self.grid[x, y, 0] + aoiHalfWidth
+        areaOfInterest = self.frame[lowerY:upperY, lowerX:upperX]
+        return areaOfInterest
 
     def printColors(self, j, i):
         aoiHalfWidth = 2
