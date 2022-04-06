@@ -13,10 +13,9 @@ class ChessCam:
         self.camera = Camera()
 
         self.frame = self.camera.capture_frame_from_videostream()
-        self.frame_shape = self.frame.shape
 
         self.centroids = Centroids()
-        self.overlay = Overlay(self.frame_shape)
+        self.overlay = Overlay(self.camera.get_cam_resolution())
 
         self.grid_captured = False
 
@@ -48,7 +47,7 @@ class ChessCam:
 
         self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
 
-        img = self.overlay.draw_grid(self.frame)
+        img = self.overlay.draw_grid(self.frame, (200,200))
         # Display the resulting frame
         cv2.imshow('computer visions', img)
         self.process_key_input()

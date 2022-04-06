@@ -5,6 +5,9 @@ import numpy as np
 class Overlay:
     def __init__(self, frame_shape):
         self.frame_shape = frame_shape
+        self.lines = 8
+        self.width = int(self.frame_shape[0])
+        self.height = int(self.frame_shape[1])
 
     def draw_line(self, img, start=(0, 0), end=(100, 100), line_thickness=2, col=(0, 255, 0)):
         img = img.copy()
@@ -15,27 +18,45 @@ class Overlay:
         cv2.rectangle(img, pts1, pts2,color=(0, 0, 0), thickness=3)
 
     def draw_grid(self, img, offset=(0, 0), scale=0.5):
-        lines = 8
-        width = int(self.frame_shape[0])
-        height = int(self.frame_shape[1])
-
-        start_positions_horiontal = np.column_stack(((np.zeros(lines, dtype=int), (np.arange(lines) * height / lines + 1).astype(int))))
-        start_positions_vertical = np.column_stack(((np.arange(lines) * height / lines).astype(int), np.zeros(lines, dtype=int)))
-
-        end_positions_horizontal = np.column_stack((np.ones(lines, dtype=int) * height, (np.arange(lines) * height / lines).astype(int)))
-        end_positions_vertical = np.column_stack(((np.arange(lines) * width / lines).astype(int), np.ones(lines, dtype=int) * width))
-        sp = np.vstack((start_positions_horiontal, start_positions_vertical))
-        ep = np.vstack((end_positions_horizontal, end_positions_vertical))
-        sp = (sp * scale).astype(int)
-        ep = (ep * scale).astype(int)
-        sp[..., 0] = sp[..., 0] + offset[0]
-        ep[..., 0] = ep[..., 0] + offset[0]
-        sp[..., 1] = ep[..., 1] + offset[1]
-        ep[..., 1] = ep[..., 1] + offset[1]
-
-        sp = [tuple(pos) for pos in sp]
-        ep = [tuple(pos) for pos in ep]
+        sp = [tuple(pos) for pos in self.get_sp(offset, scale)]
+        ep = [tuple(pos) for pos in self.get_ep(offset, scale)]
 
         for i in range(len(sp)):
             img = self.draw_line(img, sp[i], ep[i])
         return img
+
+    def get_ep(self, offset, scale):
+        ep = np.vstack((self.get_ep_horizontal(), self.get_ep_vertical()))
+        ep = self.scale_and_offset(offset, scale, ep)
+        return ep
+
+    def get_sp(self, offset, scale):
+        sp = np.vstack((self.get_sp_horizontal(), self.get_sp_vertical()))
+        sp = self.scale_and_offset(offset, scale, sp)
+        return sp
+
+    def get_ep_vertical(self):
+        end_positions_vertical = np.column_stack(
+            ((np.arange(self.lines) * self.width / self.lines).astype(int), np.ones(self.lines, dtype=int) * self.width))
+        return end_positions_vertical
+
+    def get_ep_horizontal(self):
+        end_positions_horizontal = np.column_stack(
+            (np.ones(self.lines, dtype=int) * self.height, (np.arange(self.lines) * self.height / self.lines).astype(int)))
+        return end_positions_horizontal
+
+    def get_sp_vertical(self):
+        start_positions_vertical = np.column_stack(
+            ((np.arange(self.lines) * self.height / self.lines).astype(int), np.zeros(self.lines, dtype=int)))
+        return start_positions_vertical
+
+    def get_sp_horizontal(self):
+        start_positions_horiontal = np.column_stack(
+            (np.zeros(self.lines, dtype=int), (np.arange(self.lines) * self.height / self.lines ).astype(int)))
+        return start_positions_horiontal
+
+    def scale_and_offset(self, offset, scale, sp):
+        sp = (sp * scale).astype(int)
+        sp[..., 0] = sp[..., 0] + offset[0]
+        sp[..., 1] = sp[..., 1] + offset[1]
+        return sp
