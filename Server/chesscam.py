@@ -14,7 +14,7 @@ class ChessCam:
         self.frame = self.camera.capture_frame_from_videostream()
         self.frame_shape = self.frame.shape
 
-        self.overlay = Overlay(self.frame_shape)
+        self.overlay = Overlay(self.frame_shape[:2])
 
         self.grid_captured = False
 
@@ -39,8 +39,6 @@ class ChessCam:
             if user_trigger:
                 # ToDo: Do we really need user_trigger?
                 pass # actually this is the beat capturing
-
-
 
 
     def update(self, updateGrid = True):
@@ -84,6 +82,10 @@ class ChessCam:
         #img = self.draw_line(img, start=(0, 0), end=self.frame_shape[:2])
 
         img = self.overlay.draw_grid(img)
+
+        #img = self.overlay.(img)
+
+
         # Display the resulting frame
         cv2.imshow('computer visions', img)
         self.process_input_and_quit()
@@ -196,6 +198,29 @@ class ChessCam:
         except Exception as _e:
             print("No file detected for color values")
 
+    @staticmethod
+    def point_in_triangle(p, v1, v2, v3):
+        """Checks whether a point is within the given triangle
+
+        The function checks, whether the given point p is within the triangle defined by the the three corner point v1,
+        v2 and v3.
+        This is done by checking whether the point is on all three half-planes defined by the three edges of the triangle.
+        :param p: The point to be checked (tuple with x any y coordinate)
+        :param v1: First vertex of the triangle (tuple with x any y coordinate)
+        :param v2: Second vertex of the triangle (tuple with x any y coordinate)
+        :param v3: Third vertex of the triangle (tuple with x any y coordinate)
+        :return: True if the point is within the triangle, False if not
+        """
+
+        def _test(p1, p2, p3):
+            return (p1[0] - p3[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p3[1])
+
+        b1 = _test(p, v1, v2) < 0.0
+        b2 = _test(p, v2, v3) < 0.0
+        b3 = _test(p, v3, v1) < 0.0
+
+        return (b1 == b2) and (b2 == b3)
+
 
 if __name__ == "__main__":
     cam = ChessCam()
@@ -204,11 +229,9 @@ if __name__ == "__main__":
         cam.update(True)
     i = 0
     while True:
-        if i % 100 == 0:
-            print(i)
-        if i > 100:
-            break
-        cam.run(user_trigger=True)
-
+        try:
+            cam.run(user_trigger=True)
+        except:
+            pass
     cam.gridToState()
     cam.quit()
