@@ -3,11 +3,14 @@ import numpy as np
 
 
 class Overlay:
-    def __init__(self, frame_shape):
+    def __init__(self, frame_shape, width: int = 8, height: int = 8):
         self.frame_shape = frame_shape
+        print(frame_shape)
         self.lines = 8
-        self.width = int(self.frame_shape[0])
-        self.height = int(self.frame_shape[1])
+        self.width = width
+        self.height = height
+        self.frame_width = int(self.frame_shape[0])
+        self.frame_height = int(self.frame_shape[1])
 
     def draw_line(self, img, start=(0, 0), end=(100, 100), line_thickness=2, col=(0, 255, 0)):
         img = img.copy()
@@ -37,22 +40,22 @@ class Overlay:
 
     def get_ep_vertical(self):
         end_positions_vertical = np.column_stack(
-            ((np.arange(self.lines) * self.width / self.lines).astype(int), np.ones(self.lines, dtype=int) * self.width))
+            (((np.arange(self.width) / self.width) * self.frame_width).astype(int), np.ones(self.width, dtype=int) * self.frame_width))
         return end_positions_vertical
 
     def get_ep_horizontal(self):
         end_positions_horizontal = np.column_stack(
-            (np.ones(self.lines, dtype=int) * self.height, (np.arange(self.lines) * self.height / self.lines).astype(int)))
+            (np.ones(self.height, dtype=int) * self.frame_height, (np.arange(self.height) * self.frame_height).astype(int)))
         return end_positions_horizontal
 
     def get_sp_vertical(self):
         start_positions_vertical = np.column_stack(
-            ((np.arange(self.lines) * self.height / self.lines).astype(int), np.zeros(self.lines, dtype=int)))
+            ((np.arange(self.lines) * self.frame_height / self.lines).astype(int), np.zeros(self.lines, dtype=int)))
         return start_positions_vertical
 
     def get_sp_horizontal(self):
         start_positions_horiontal = np.column_stack(
-            (np.zeros(self.lines, dtype=int), (np.arange(self.lines) * self.height / self.lines ).astype(int)))
+            (np.zeros(self.lines, dtype=int), (np.arange(self.lines) * self.frame_height / self.lines).astype(int)))
         return start_positions_horiontal
 
     def scale_and_offset(self, offset, scale, sp):
