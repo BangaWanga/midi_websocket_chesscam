@@ -58,6 +58,17 @@ class ChessCam:
                 # ToDo: Do we really need user_trigger?
                 pass # actually this is the beat capturing
 
+    def update(self, updateGrid = True):
+        self.frame = self.camera.capture_frame_from_videostream()
+        gray_scaled = self.camera.apply_gray_filter(self.frame)
+
+        self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
+
+        img = self.overlay.draw_grid(self.frame, (0, 0))
+        # Display the resulting frame
+        cv2.imshow('computer visions', img)
+        self.process_key_input()
+
     def process_key_input(self):
         key = cv2.waitKey(1)
         if key == 113 or key == 27:

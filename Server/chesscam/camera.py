@@ -13,18 +13,17 @@ class Camera:
         else:
             raise ValueError("Can't read frame")
 
-    def get_cam_resolution(self):
+    def get_cam_resolution(self, ):
         # broken for mac camera, just return static value
         # ToDo: Move to config
-        #return (self.cam.get(3), self.cam.get(4))
-        return (500, 500)
+        frame = self.capture_frame_from_videostream()
+        return frame.shape[0], frame.shape[1]
 
     def flip(self, frame):
         # flip it since conventions in cv2 are the other way round
         frame = np.flip(frame, axis=1)
         frame = np.flip(frame, axis=2)
         return frame
-
 
     def apply_gray_filter(self, img, white_areas=(5, 5)):   # Small number = small white areas
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
