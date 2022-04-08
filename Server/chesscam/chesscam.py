@@ -8,6 +8,10 @@ from Server.chesscam.overlay import Overlay
 
 class ChessCam:
     def __init__(self):
+        self.overlay_scale = 0.5
+        self.overlay_pos = (0, 0)
+        self.set_move_size = 5
+
         self.grid = np.zeros((8, 8, 2), dtype=np.int32)
 
         self.camera = Camera()
@@ -47,7 +51,7 @@ class ChessCam:
 
         self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
 
-        img = self.overlay.draw_grid(self.frame, (200,200))
+        img = self.overlay.draw_grid(self.frame, self.overlay_pos, self.overlay_scale)
         # Display the resulting frame
         cv2.imshow('computer visions', img)
         self.process_key_input()
@@ -56,6 +60,23 @@ class ChessCam:
         key = cv2.waitKey(1)
         if key == 113 or key == 27:
             exit()
+
+        if key == 97:
+            self.overlay_pos = (self.overlay_pos[0] - self.set_move_size, self.overlay_pos[1])
+        if key == 100:
+            self.overlay_pos = (self.overlay_pos[0] + self.set_move_size, self.overlay_pos[1])
+        if key == 119:
+            self.overlay_pos = (self.overlay_pos[0], self.overlay_pos[1] - self.set_move_size)
+        if key == 115:
+            self.overlay_pos = (self.overlay_pos[0], self.overlay_pos[1] + self.set_move_size)
+
+        if key == 43:
+            self.overlay_scale += 0.01
+        if key == 45:
+            self.overlay_scale -= 0.01
+
+        if key != -1:
+            print(key)
 
     def gridToState(self):
         aoiHalfWidth = 5  # half width in pixels of the square area of interest around the centroids
