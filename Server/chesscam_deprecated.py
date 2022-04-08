@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from Server.chesscam import Camera
+from Server.chesscam.camera import Camera
 from Server.overlay_deprecated import Overlay
 
 
