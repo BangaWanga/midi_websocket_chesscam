@@ -5,7 +5,8 @@ import random
 
 
 class Overlay:
-    def __init__(self, frame_shape, width: int = 8, height: int = 8):
+    def __init__(self, frame_shape, width: int = 8, height: int = 8, offset: Tuple[int, int] = (0, 0),
+                 scale: float = 1.):
         self.frame_shape = frame_shape
         print(frame_shape)
         self.lines = 8
@@ -13,6 +14,19 @@ class Overlay:
         self.height = height
         self.frame_width = int(self.frame_shape[0])
         self.frame_height = int(self.frame_shape[1])
+        self.offset = offset
+        self.scale = scale
+        self.grid = self.make_grid()
+
+    def make_grid(self):
+        grid = {}
+        for i in range(self.height):
+            for j in range(self.width):
+                random_col = tuple(random.randint(0, 255) for _ in range(3))
+                edge0, edge1, edge2, edge3 = self.get_pixel_edges(i, j, self.offset, self.scale)
+                line_coordinates = self.get_start_and_endpoints_from_edges(edge0, edge1, edge2, edge3)
+                grid[(i, j)] = {"line_coordinates": line_coordinates, "color": random_col}
+        return grid
 
     def draw_line(self, img, start=(0, 0), end=(100, 100), line_thickness=2, col=(0, 255, 0)):
         img = img.copy()
