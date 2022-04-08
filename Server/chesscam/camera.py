@@ -9,8 +9,7 @@ class Camera:
     def capture_frame_from_videostream(self):
         ret, frame = self.cam.read()
         if ret:
-            frame = self.flip(frame)
-            return frame
+            return self.flip(frame)
         else:
             raise ValueError("Can't read frame")
 
