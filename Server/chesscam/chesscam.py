@@ -35,6 +35,19 @@ class ChessCam:
         self.states = np.zeros(self.grid.shape[:2], dtype=np.int32)   # array that holds a persistent state of the chessboard
         print("Chesscam init finished")
 
+
+    def update(self, updateGrid = True):
+        self.frame = self.camera.capture_frame_from_videostream()
+        gray_scaled = self.camera.apply_gray_filter(self.frame)
+
+        self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
+
+        img = self.overlay.draw_grid(self.frame, self.overlay_pos, self.overlay_scale)
+
+        # Display the resulting frame
+        cv2.imshow('computer visions', img)
+        self.process_key_input()
+
     def run(self, user_trigger=False):
         #At first we need the grid
         if not self.grid_captured:
@@ -45,21 +58,10 @@ class ChessCam:
                 # ToDo: Do we really need user_trigger?
                 pass # actually this is the beat capturing
 
-    def update(self, updateGrid = True):
-        self.frame = self.camera.capture_frame_from_videostream()
-        gray_scaled = self.camera.apply_gray_filter(self.frame)
-
-        self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
-
-        img = self.overlay.draw_grid(self.frame, self.overlay_pos, self.overlay_scale)
-        # Display the resulting frame
-        cv2.imshow('computer visions', img)
-        self.process_key_input()
-
     def process_key_input(self):
         key = cv2.waitKey(1)
         if key == 113 or key == 27:
-            exit()
+            self.quit()
 
         if key == 97:
             self.overlay_pos = (self.overlay_pos[0] - self.set_move_size, self.overlay_pos[1])
@@ -112,33 +114,11 @@ class ChessCam:
         areaOfInterest = self.frame[lowerY:upperY, lowerX:upperX]
         return areaOfInterest
 
-    def printColors(self, j, i):
-        aoiHalfWidth = 2
-        areaOfInterest = self.frame[self.grid[j, i, 1]-aoiHalfWidth:self.grid[j, i, 1]+aoiHalfWidth, self.grid[j, i, 0]-aoiHalfWidth:self.grid[j, i, 0]+aoiHalfWidth]
-        print(areaOfInterest)
-
-    def setRange(self, colorIndex, j, i):
-        aoiHalfWidth = 2
-        areaOfInterest = self.frame[self.grid[j, i, 1]-aoiHalfWidth:self.grid[j, i, 1]+aoiHalfWidth, self.grid[j, i, 0]-aoiHalfWidth:self.grid[j, i, 0]+aoiHalfWidth]
-        meanColor = np.mean(np.mean(areaOfInterest, axis=0), axis=0)
-        lowerColor = np.clip(meanColor - 20, 0, 255).astype(np.uint8)
-        upperColor = np.clip(meanColor + 20, 0, 255).astype(np.uint8)
-
-        self.colorBoundaries[colorIndex] = [lowerColor, upperColor]
-
     def quit(self):
         # When everything done, release the capture
-        self.cam.release()
+        self.camera.cam.release()
         cv2.destroyAllWindows()
-
-    def save_calibrated(self):
-        np.save('colors.yamama', self.colorBoundaries)
-
-    def load_calibrated(self):
-        try:
-            self.colorBoundaries = np.load('colors.yamama')
-        except Exception as _e:
-            print("No file detected for color values")
+        quit()
 
 
 if __name__ == "__main__":
@@ -153,6 +133,3 @@ if __name__ == "__main__":
         if i > 100:
             break
         cam.run(user_trigger=True)
-
-    cam.gridToState()
-    cam.quit()
