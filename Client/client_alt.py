@@ -32,7 +32,6 @@ class Client:
             except:
                 pass
 
-
 #            websockets.exceptions.ConnectionClosed, concurrent.futures._base.CancelledError, OSError, ConnectionResetError,
  #           json.decoder.JSONDecodeError) as e:
  #                try:

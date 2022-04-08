@@ -36,19 +36,6 @@ class ChessCam:
         print("Chesscam init finished")
 
 
-    def update(self, updateGrid = True):
-        self.frame = self.camera.capture_frame_from_videostream()
-        gray_scaled = self.camera.apply_gray_filter(self.frame)
-
-        self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
-
-        self.overlay.change_drawing_options(self.overlay_pos, self.overlay_scale)
-        img = self.overlay.draw_grid(self.frame)
-
-        # Display the resulting frame
-        cv2.imshow('computer visions', img)
-        self.process_key_input()
-
     def run(self, user_trigger=False):
         #At first we need the grid
         if not self.grid_captured:
@@ -59,11 +46,11 @@ class ChessCam:
                 # ToDo: Do we really need user_trigger?
                 pass # actually this is the beat capturing
 
-    def update(self, updateGrid = True):
+    def update(self):
         self.frame = self.camera.capture_frame_from_videostream()
-        gray_scaled = self.camera.apply_gray_filter(self.frame)
+        #_gray_scaled = self.camera.apply_gray_filter(self.frame)
 
-        self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
+        #self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
 
         img = self.overlay.draw_grid(self.frame)
         # Display the resulting frame
@@ -136,12 +123,5 @@ class ChessCam:
 if __name__ == "__main__":
     cam = ChessCam()
 
-    while not cam.grid_captured:
-        cam.update(True)
-    i = 0
     while True:
-        if i % 100 == 0:
-            pass
-        if i > 100:
-            break
-        cam.run(user_trigger=True)
+        cam.update()
