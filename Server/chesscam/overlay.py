@@ -36,16 +36,20 @@ class Overlay:
         edges = tuple(map(cast_to_int, edges))
         return edges
 
-    def draw_grid(self, img, offset=(0, 0), scale=1.):
-        for i in range(self.height):
-            for j in range(self.width):
-                random_col = tuple(random.randint(0,255) for _ in range(3))
-                edge0, edge1, edge2, edge3 = self.get_pixel_edges(i, j, offset, scale)
-                for line_coordinates in self.get_start_and_endpoints_from_edges(edge0, edge1, edge2, edge3):
-                    startpoint, endpoint = line_coordinates
-                    print(f"line_coordinates: {line_coordinates}. startpoint: {startpoint}, endpoint: {endpoint}")
-                    img = self.draw_line(img, startpoint, endpoint, col=random_col)
+    def change_drawing_options(self, offset: Tuple[int, int] = (0, 0), scale: float = 1.):
+        self.offset = offset
+        self.scale = scale
+        self.grid = self.make_grid()
+
+    def draw_grid(self, img):
+        for k, v in self.grid.items():
+            line_coordinates = v["line_coordinates"]
+            for line in line_coordinates:
+                startpoint, endpoint = line
+                img = self.draw_line(img, startpoint, endpoint, col=v["color"])
         return img
+
+
 
     def get_start_and_endpoints_from_edges(self, edge0, edge1, edge2, edge3):
         return [(edge0, edge1), (edge0, edge2), (edge2, edge3), (edge1, edge3)]

@@ -42,7 +42,8 @@ class ChessCam:
 
         self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
 
-        img = self.overlay.draw_grid(self.frame, self.overlay_pos, self.overlay_scale)
+        self.overlay.change_drawing_options(self.overlay_pos, self.overlay_scale)
+        img = self.overlay.draw_grid(self.frame)
 
         # Display the resulting frame
         cv2.imshow('computer visions', img)
@@ -64,7 +65,7 @@ class ChessCam:
 
         self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
 
-        img = self.overlay.draw_grid(self.frame, (0, 0))
+        img = self.overlay.draw_grid(self.frame)
         # Display the resulting frame
         cv2.imshow('computer visions', img)
         self.process_key_input()
