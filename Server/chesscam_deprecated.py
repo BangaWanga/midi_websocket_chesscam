@@ -40,7 +40,6 @@ class ChessCam:
                 # ToDo: Do we really need user_trigger?
                 pass # actually this is the beat capturing
 
-
     def update(self, updateGrid = True):
         self.frame = self.camera.capture_frame_from_videostream()
         gray_scaled = self.camera.apply_gray_filter(self.frame)

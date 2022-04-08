@@ -14,14 +14,11 @@ class Camera:
         else:
             raise ValueError("Can't read frame")
 
-    def get_cam_resolution(self, pc_cam=False):
+    def get_cam_resolution(self, ):
         # broken for mac camera, just return static value
         # ToDo: Move to config
-        if pc_cam:
-            return (self.cam.get(3), self.cam.get(4))
-
-        return 500, 500
-
+        frame = self.capture_frame_from_videostream()
+        return frame.shape[0], frame.shape[1]
 
     def flip(self, frame):
         # flip it since conventions in cv2 are the other way round

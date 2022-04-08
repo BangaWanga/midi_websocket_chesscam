@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
-
+from typing import Tuple
+import random
 
 class Overlay:
     def __init__(self, frame_shape, width: int = 8, height: int = 8):
@@ -20,20 +21,48 @@ class Overlay:
     def draw_rectangle(self, img, pts1=(0, 0), pts2=(100, 100)):
         cv2.rectangle(img, pts1, pts2,color=(0, 0, 0), thickness=3)
 
-    def draw_grid(self, img, offset=(0, 0), scale=0.5):
-        sp = [tuple(pos) for pos in self.get_sp(offset, scale)]
-        ep = [tuple(pos) for pos in self.get_ep(offset, scale)]
+    def get_pixel_edges(self, x: int, y: int, offset: Tuple[int, int], scale: float):
+        edge0 = ((x / self.width) * self.frame_width, (y / self.height) * self.frame_height)
+        edge1 = ((x + 1 / self.width) * self.frame_width, (y / self.height) * self.frame_height)
+        edge2 = ((x / self.width) * self.frame_width, (y + 1/ self.height) * self.frame_height)
+        edge3 = ((x + 1/ self.width) * self.frame_width, (y + 1 / self.height) * self.frame_height)
+        edges = (edge0, edge1, edge2, edge3)
+        apply_offset = lambda tu: (tu[0] + offset[0], tu[1] + offset[1])
+        apply_scale = lambda tu: (tu[0] * scale, tu[1] * scale)
+        cast_to_int = lambda tu: (int(tu[0]), int(tu[1]))
+        edges = tuple(map(apply_offset, edges))
+        edges = tuple(map(apply_scale, edges))
+        edges = tuple(map(cast_to_int, edges))
+        return edges
+
+    def draw_grid(self, img, offset=(0, 0), scale=1.):
+        for i in range(self.height):
+            for j in range(self.width):
+                random_col = tuple(random.randint(0,255) for _ in range(3))
+                edge0, edge1, edge2, edge3 = self.get_pixel_edges(i, j, offset, scale)
+                for line_coordinates in self.get_start_and_endpoints_from_edges(edge0, edge1, edge2, edge3):
+                    startpoint, endpoint = line_coordinates
+                    print(f"line_coordinates: {line_coordinates}. startpoint: {startpoint}, endpoint: {endpoint}")
+                    img = self.draw_line(img, startpoint, endpoint, col=random_col)
+        return img
+
+    def draw_grid_deprecated(self, img, offset=(0, 0), scale=1.):
+        sp = [tuple(pos) for pos in self.get_startpoints(offset, scale)]
+        ep = [tuple(pos) for pos in self.get_endpoints(offset, scale)]
 
         for i in range(len(sp)):
             img = self.draw_line(img, sp[i], ep[i])
         return img
 
-    def get_ep(self, offset, scale):
+    def get_start_and_endpoints_from_edges(self, edge0, edge1, edge2, edge3):
+        return [(edge0, edge1), (edge0, edge2), (edge2, edge3), (edge1, edge3)]
+
+    def get_endpoints(self, offset, scale):
         ep = np.vstack((self.get_ep_horizontal(), self.get_ep_vertical()))
         ep = self.scale_and_offset(offset, scale, ep)
         return ep
 
-    def get_sp(self, offset, scale):
+    def get_startpoints(self, offset, scale):
         sp = np.vstack((self.get_sp_horizontal(), self.get_sp_vertical()))
         sp = self.scale_and_offset(offset, scale, sp)
         return sp
