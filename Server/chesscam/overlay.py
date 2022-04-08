@@ -1,5 +1,4 @@
 import cv2
-import numpy as np
 from typing import Tuple
 import random
 
@@ -9,7 +8,6 @@ class Overlay:
                  scale: float = 1.):
         self.frame_shape = frame_shape
         print(frame_shape)
-        self.lines = 8
         self.width = width
         self.height = height
         self.frame_width = int(self.frame_shape[0])
@@ -33,14 +31,16 @@ class Overlay:
         cv2.line(img, start, end, col, thickness=line_thickness)
         return img
 
-    def draw_rectangle(self, img, pts1=(0, 0), pts2=(100, 100)):
-        cv2.rectangle(img, pts1, pts2,color=(0, 0, 0), thickness=3)
+    def draw_rectangle(self, img, pts1=(0, 0), pts2=(100, 100), col=(0, 0, 0)):
+        img = img.copy()
+        cv2.rectangle(img, pts1, pts2, color=col, thickness=3)
+        return img
 
     def get_pixel_edges(self, x: int, y: int, offset: Tuple[int, int], scale: float):
-        edge0 = ((x / self.width) * self.frame_width, (y / self.height) * self.frame_height)
-        edge1 = ((x + 1 / self.width) * self.frame_width, (y / self.height) * self.frame_height)
-        edge2 = ((x / self.width) * self.frame_width, (y + 1/ self.height) * self.frame_height)
-        edge3 = ((x + 1/ self.width) * self.frame_width, (y + 1 / self.height) * self.frame_height)
+        edge0 = (x * (self.frame_height / self.width), y * (self.frame_width / self.height))
+        edge1 = (((x + 1) / self.width) * self.frame_height, (y / self.height) * self.frame_width)
+        edge2 = ((x / self.width) * self.frame_height, ((y + 1) / self.height) * self.frame_width)
+        edge3 = ((x + 1) * (self.frame_height / self.width), ((y + 1) * (self.frame_width / self.height)))
         edges = (edge0, edge1, edge2, edge3)
         apply_offset = lambda tu: (tu[0] + offset[0], tu[1] + offset[1])
         apply_scale = lambda tu: (tu[0] * scale, tu[1] * scale)
@@ -58,12 +58,17 @@ class Overlay:
     def draw_grid(self, img):
         for k, v in self.grid.items():
             line_coordinates = v["line_coordinates"]
+            """
             for line in line_coordinates:
                 startpoint, endpoint = line
                 img = self.draw_line(img, startpoint, endpoint, col=v["color"])
+            """
+
+            for line in (line_coordinates[0], line_coordinates[-1]):
+                startpoint, endpoint = line
+                img = self.draw_rectangle(img, startpoint, endpoint, col=v["color"])
+
         return img
-
-
 
     def get_start_and_endpoints_from_edges(self, edge0, edge1, edge2, edge3):
         return [(edge0, edge1), (edge0, edge2), (edge2, edge3), (edge1, edge3)]
