@@ -35,17 +35,6 @@ class ChessCam:
         self.states = np.zeros(self.grid.shape[:2], dtype=np.int32)   # array that holds a persistent state of the chessboard
         print("Chesscam init finished")
 
-
-    def run(self, user_trigger=False):
-        #At first we need the grid
-        if not self.grid_captured:
-            self.update(updateGrid=True)
-        else:
-            self.update(updateGrid=False)
-            if user_trigger:
-                # ToDo: Do we really need user_trigger?
-                pass # actually this is the beat capturing
-
     def update(self):
         self.frame = self.camera.capture_frame_from_videostream()
         #_gray_scaled = self.camera.apply_gray_filter(self.frame)
