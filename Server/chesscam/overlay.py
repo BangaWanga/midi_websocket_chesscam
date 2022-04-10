@@ -9,7 +9,6 @@ class Overlay:
     def __init__(self, frame_shape, width: int = 8, height: int = 8, offset: Tuple[int, int] = (0, 0),
                  scale: float = 1.):
         self.frame_shape = frame_shape
-        print(frame_shape)
         self.width = width
         self.height = height
         self.frame_width = int(self.frame_shape[1])
@@ -74,9 +73,7 @@ class Overlay:
                 img = self.draw_line(img, startpoint, endpoint, col=v["color"])
             # draw circle in center:
             img = self.draw_circle(img, v["center_point"], col=v["color"])
-            print(v["center_point"])
             """
-
             for line in (line_coordinates[0], line_coordinates[-1]):
                 startpoint, endpoint = line
                 img = self.draw_rectangle(img, startpoint, endpoint, col=v["color"])
@@ -92,11 +89,8 @@ class Overlay:
 
     def find_center_of_square(self, edge0, edge1, edge2, edge3):
         edges = [edge0, edge1, edge2, edge3]
-        print(edges)
         comb = list(itertools.combinations(edges, 2))   # every possible combination of the edges
         diam = [Overlay.calc_diameter(*pts) for pts in comb]
         pt0, pt1 = comb[diam.index(max(diam))]  # find points with biggest diameter
         center_point = (int((pt0[0] + pt1[0]) / 2), int((pt0[1] + pt1[1]) / 2))
-        print(center_point)
-        #center_point = (center_point[1], center_point[0])
         return center_point
