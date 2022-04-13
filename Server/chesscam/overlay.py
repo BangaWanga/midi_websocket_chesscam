@@ -7,7 +7,7 @@ import random
 
 
 class Overlay:
-    def __init__(self, frame_shape, width: int = 20 , height: int = 8, offset: Tuple[int, int] = (0, 0),
+    def __init__(self, frame_shape, width: int = 8, height: int = 8, offset: Tuple[int, int] = (0, 0),
                  scale: float = 1.):
         self.frame_shape = frame_shape
         print(frame_shape)
@@ -17,9 +17,10 @@ class Overlay:
         self.frame_height = int(self.frame_shape[0])
         self.offset = offset
         self.scale = scale
-        self.grid = self.make_grid()
+        self.grid = {}
+        self.update_grid(False)
 
-    def make_grid(self):
+    def update_grid(self, ignore_colors: bool):
         grid = {}
         for i in range(self.height):
             for j in range(self.width):
@@ -28,8 +29,19 @@ class Overlay:
                 edge0, edge1, edge2, edge3 = self.get_pixel_edges(j, i, self.offset, self.scale)
                 line_coordinates = self.get_start_and_endpoints_from_edges(edge0, edge1, edge2, edge3)
                 center_point = self.find_center_of_square(edge0, edge1, edge2, edge3)
-                grid[(i, j)] = {"line_coordinates": line_coordinates, "center_point": center_point, "color": random_col}
-        return grid
+                if ignore_colors: # Get old colors to new positions
+                    if (i, j) not in self.grid:
+                        raise ValueError("Grid is not initalized but ignore colors is False")
+                    grid[(i, j)] = {"line_coordinates": line_coordinates,
+                                    "center_point": center_point,
+                                    "color": self.grid[(i, j)]["color"]}
+                else:
+                    grid.update(
+                        {(i, j):
+                             {"line_coordinates": line_coordinates, "center_point": center_point, "color": random_col}}
+                        )
+
+        self.grid = grid
 
     def draw_line(self, img, start=(0, 0), end=(100, 100), line_thickness=2, col=(0, 255, 0)):
         img = img.copy()
@@ -61,10 +73,10 @@ class Overlay:
         edges = tuple(map(cast_to_int, edges))
         return edges
 
-    def change_drawing_options(self, offset: Tuple[int, int] = (0, 0), scale: float = 1.):
+    def change_drawing_options(self, offset: Tuple[int, int] = (0, 0), scale: float = 1., ignore_colors: bool = True):
         self.offset = offset
         self.scale = scale
-        self.grid = self.make_grid()
+        self.update_grid(ignore_colors=ignore_colors)
 
     def draw_grid(self, img):
         for k, v in self.grid.items():
@@ -78,13 +90,6 @@ class Overlay:
                 self.scan_square(img, v["center_point"], debug=True)
             else:
                 self.scan_square(img, v["center_point"])
-
-            """
-
-            for line in (line_coordinates[0], line_coordinates[-1]):
-                startpoint, endpoint = line
-                img = self.draw_rectangle(img, startpoint, endpoint, col=v["color"])
-            """
         return img
 
     def get_start_and_endpoints_from_edges(self, edge0, edge1, edge2, edge3):
