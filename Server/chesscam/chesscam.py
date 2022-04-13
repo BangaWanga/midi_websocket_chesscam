@@ -8,26 +8,13 @@ from Server.chesscam.overlay import Overlay
 
 class ChessCam:
     def __init__(self):
-
         self.camera = Camera()
-
-        self.frame = self.camera.capture_frame_from_videostream()
-
         self.overlay = Overlay(self.camera.get_cam_resolution())    # handle scale and pos differently
-
-        self.grid_captured = False
-
-
         print("Chesscam init finished")
 
     def update(self):
-        self.frame = self.camera.capture_frame_from_videostream()
-        #_gray_scaled = self.camera.apply_gray_filter(self.frame)
-
-        #self.centroids.do_stoff_with_centroids(gray_scaled, updateGrid)
-
-        img = self.overlay.draw_grid(self.frame)
-        # Display the resulting frame
+        frame = self.camera.capture_frame_from_videostream()
+        img = self.overlay.draw_grid(frame)
         cv2.imshow('computer visions', img)
         self.process_key_input()
 
