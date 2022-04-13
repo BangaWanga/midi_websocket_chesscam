@@ -232,5 +232,5 @@ if __name__ == "__main__":
             cam.run(user_trigger=True)
         except:
             pass
-    cam.gridToState()
+    #cam.gridToState()
     cam.quit()
