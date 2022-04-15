@@ -31,7 +31,7 @@ class ChessCam:
         print("Chesscam init finished")
 
     def run(self, user_trigger=False):
-        #At first we need the grid
+        # At first we need the grid
         if not self.grid_captured:
             self.update(updateGrid=True)
         else:

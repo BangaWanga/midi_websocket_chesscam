@@ -53,7 +53,6 @@ class Centroids:
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                             color=c)
 
-
     def make_grid(self, centroids):
         # We assume that the field in the upper left corner is white
         # We should have 32 measured centroids in total (for the white fields)

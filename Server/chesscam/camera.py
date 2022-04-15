@@ -9,8 +9,9 @@ class Camera:
 
     def capture_frame_from_videostream(self):
         ret, frame = self.cam.read()
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         if ret:
-            return self.flip(frame)
+            return self.flip(frame_rgb)
         else:
             raise ValueError("Can't read frame")
 
