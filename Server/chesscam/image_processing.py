@@ -83,16 +83,16 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
     topleft_index = np.argmin(innermost_peris)
     hull_topleft = np.where(convex_hull_indices == topleft_index)[0][0]
 
-    # Note: Instead of the centroids, it should be more stable to use e.g. the innermost vertices of each marker
+    # Note: Instead of the centroids, it should be more stable to use e.g. the outermost vertices of each marker
     # find the centroid of all markers, as a reference for vertex distance measurement
     board_centroid = np.mean(marker_centroids, axis=0)
-    inner_vertices = np.array([vertices[np.argmin(distance(vertices, board_centroid))] for vertices in approxes])
-    # inner_hull = cv2.convexHull(inner_vertices, clockwise=True, returnPoints=True).squeeze()
+    outer_vertices = np.array([vertices[np.argmax(distance(vertices, board_centroid))] for vertices in approxes])
+    # inner_hull = cv2.convexHull(outer_vertices, clockwise=True, returnPoints=True).squeeze()
 
     # source_points = np.array([marker_centroids[convex_hull_indices[i % 4]]
     #                           for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
     # source_points = inner_hull.astype(np.float32)
-    source_points = np.array([inner_vertices[convex_hull_indices[i % 4]]
+    source_points = np.array([outer_vertices[convex_hull_indices[i % 4]]
                               for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
     target_points = np.array([
         [0, 0],
