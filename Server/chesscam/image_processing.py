@@ -1,11 +1,12 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
 from functools import partial
 
 
-def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndarray]:
+def standardize_position(frame: np.ndarray, debug: str = '') \
+        -> Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
     """Transform the input frame in a way that maps the board fields to standard locations
 
     This tries to detect the positioning markers in the frame. In case the expected pattern of markers is not found,
@@ -19,7 +20,9 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
             Default: ''. Note that some debug modes might return early and thus might prevent others to be applied.
 
     Returns:
-        The transformed image in case of successful position detection or `None` in case of no success.
+        proc_frame: The transformed image in case of successful position detection or `None` in case of no success.
+        source_coords: The alignment coordinates in the original image or `None` in case of no success.
+        target_coords: The alignment coordinates in the processed image or `None` in case of no success.
     """
     debug_modes = debug.split('+')
 
@@ -50,7 +53,7 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
     matches_marker_hierarchy = [has_marker_hierarchy(h, hierarchy=hierarchy[0]) for h in hierarchy[0]]
     marker_indices = np.where(matches_marker_hierarchy)[0]
     if not debug and len(marker_indices) < 4:
-        return None
+        return None, None, None
 
     # 2. the marker contours should be approximate quadrilaterals
     approxes = [cv2.approxPolyDP(contours[i], cv2.arcLength(contours[i], True) * 0.05, True) for i in marker_indices]
@@ -58,19 +61,19 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
     corner_number_match_indices = np.where(corner_nums == 4)[0]  # just keep the shapes with four vertices
     marker_indices = marker_indices[corner_number_match_indices]
     if not debug and len(marker_indices) < 4:
-        return None
+        return None, None, None
 
     # 3. the shape defined by all position markers has to be convex from any perspective
     marker_centroids = np.array([np.mean(app.squeeze(), axis=0).astype(np.int32) for app in approxes])
     convex_hull_indices = cv2.convexHull(marker_centroids, clockwise=True, returnPoints=False).squeeze()
     if not debug and len(convex_hull_indices) != len(marker_indices):
-        return None
+        return None, None, None
 
     print(f'{len(marker_indices)} position marker candidates found')
 
     # if the number of found position markers is not right, we can abort
     if not debug and len(marker_indices) != 4:
-        return None
+        return None, None, None
 
     marker_contours = [contours[i] for i in marker_indices]
     other_contours = [contours[i] for i in range(len(contours)) if i not in marker_indices]
@@ -91,13 +94,13 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
     outer_vertices = np.array([vertices[np.argmax(distance(vertices, board_centroid))] for vertices in approxes])
     # inner_hull = cv2.convexHull(outer_vertices, clockwise=True, returnPoints=True).squeeze()
 
-    # source_points = np.array([marker_centroids[convex_hull_indices[i % 4]]
+    # source_coords = np.array([marker_centroids[convex_hull_indices[i % 4]]
     #                           for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
-    # source_points = inner_hull.astype(np.float32)
-    source_points = np.array([outer_vertices[convex_hull_indices[i % 4]]
+    # source_coords = inner_hull.astype(np.float32)
+    source_coords = np.array([outer_vertices[convex_hull_indices[i % 4]]
                               for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
-    target_points = get_target_coords()
-    proc_frame = transform_quadrilateral(frame, source_points, target_points)
+    target_coords = get_target_coords()
+    proc_frame = transform_quadrilateral(frame, source_coords, target_coords)
 
     # drawing for optional debugging
     draw_frame = frame
@@ -114,7 +117,7 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
         proc_frame = cv2.drawContours(draw_frame, other_contours, -1, (0, 255, 0), 2)
         proc_frame = cv2.drawContours(proc_frame, marker_contours, -1, (255, 0, 0), 2)
 
-    return proc_frame
+    return proc_frame, source_coords, target_coords
 
 
 def weighted_var(xs, weights):
@@ -254,7 +257,7 @@ if __name__ == '__main__':
     # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
     # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_normal.jpg')
     # stand_img = standardize_position(input_img, debug='contours+binarization')
-    stand_img = standardize_position(input_img, debug='')
+    stand_img, _, _ = standardize_position(input_img, debug='')
 
     # resize to fixed height
     scale_fac = 800 / input_img.shape[0]
