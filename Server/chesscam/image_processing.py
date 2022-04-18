@@ -95,10 +95,10 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
     source_points = np.array([outer_vertices[convex_hull_indices[i % 4]]
                               for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
     target_points = np.array([
-        [0, 0],
-        [0, 500],
-        [500, 500],
-        [500, 0]
+        [5, 5],
+        [5, 495],
+        [495, 495],
+        [495, 5]
     ], dtype=np.float32)
 
     transform_matrix = cv2.getPerspectiveTransform(source_points, target_points)
@@ -233,9 +233,9 @@ if __name__ == '__main__':
     # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/board.png')
     # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/small_board.png')
     # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/rotated_board.png')
-    # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_rotated2.jpg')
+    input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_rotated2.jpg')
     # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_half_dark.jpg')
-    input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
+    # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
     # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_normal.jpg')
     # stand_img = standardize_position(input_img, debug='contours+binarization')
     stand_img = standardize_position(input_img, debug='')
