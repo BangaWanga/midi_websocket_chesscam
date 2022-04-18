@@ -74,6 +74,10 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
     other_contours = [contours[i] for i in range(len(contours)) if i not in marker_indices]
 
     # ---- Transform the frame into standard form
+    # find the top left marker due to its smaller inner square
+    # Note: It would be more stable against extreme perspective distortions to do this step after a first transformation
+    # without sorting, for fairer size comparison (close vs. far objects).
+    # Maybe implement by rotation after transformation.
     innermost_contours = [contours[hierarchy[0][hierarchy[0][i][2]][2]] for i in marker_indices]
     innermost_peris = [cv2.arcLength(c, True) for c in innermost_contours]
     topleft_index = np.argmin(innermost_peris)
@@ -81,13 +85,13 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
 
     source_points = np.array([marker_centroids[convex_hull_indices[i % 4]]
                               for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
-
     target_points = np.array([
         [0, 0],
-        [500, 0],
+        [0, 500],
         [500, 500],
-        [0, 500]
+        [500, 0]
     ], dtype=np.float32)
+
     transform_matrix = cv2.getPerspectiveTransform(source_points, target_points)
     proc_frame = cv2.warpPerspective(frame, transform_matrix, (500, 500))
 
@@ -115,7 +119,7 @@ def weighted_var(xs, weights):
 
 
 def binarize_otsu_own(frame):
-    """Our own implementation of Otsu's method for binarization"""
+    """Our own implementation of Otsu's method for global binarization"""
     # Analyze histogram to find a good binarization threshold
     hist = cv2.calcHist(images=[proc_frame], channels=[0], mask=None, histSize=[256], ranges=[0, 256])
 
@@ -129,7 +133,7 @@ def binarize_otsu_own(frame):
 
 
 def binarize_otsu(frame):
-    """Otsu's method for binarization as implemented in cv2"""
+    """Otsu's method for global binarization as implemented in cv2"""
     thresh, proc_frame = cv2.threshold(frame, 0, maxval=255, type=cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     return thresh, proc_frame
@@ -216,16 +220,22 @@ if __name__ == '__main__':
     # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/small_board.png')
     # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/rotated_board.png')
     # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_rotated2.jpg')
-    # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_half_dark.jpg')
+    input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_half_dark.jpg')
     # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
-    input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_normal.jpg')
+    # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_normal.jpg')
     # stand_img = standardize_position(input_img, debug='contours+binarization')
     stand_img = standardize_position(input_img, debug='')
+
+    # resize to fixed height
+    scale_fac = 800 / input_img.shape[0]
+    input_img = cv2.resize(input_img, (int(scale_fac * input_img.shape[1]), int(scale_fac * input_img.shape[0])))
+    cv2.imshow('Input image', input_img)
 
     if stand_img is not None:
         # resize to fixed height
         scale_fac = 800 / stand_img.shape[0]
         stand_img = cv2.resize(stand_img, (int(scale_fac * stand_img.shape[1]), int(scale_fac * stand_img.shape[0])))
         cv2.imshow('Processed image', stand_img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
