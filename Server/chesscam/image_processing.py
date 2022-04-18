@@ -29,16 +29,18 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
     proc_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     # Blur to remove noise
     proc_frame = cv2.GaussianBlur(proc_frame, ksize=(5, 5), sigmaX=0)
-    preproc_frame = proc_frame.copy()  # save for later reference in debugging
+    if debug:
+        preproc_frame = proc_frame.copy()  # save for later reference in debugging
 
-    # Binarization (we want an image that only contains full black or white)
+    # ---- Binarization (we want an image that only contains full black or white)
     # adaptive binarization thresholding, using pixel neighborhood for threshold calculation
     proc_frame = binarize_adaptive(proc_frame)
-    bin_frame = proc_frame.copy()  # save for later reference in debugging
+    if debug:
+        bin_frame = proc_frame.copy()  # save for later reference in debugging
 
     # ---- Find the position markers
     # find contours of black shapes in the preprocessed image
-    # invert image (findContours() returns contours of white objects on black background)
+    # first, invert image (findContours() returns contours of white objects on black background)
     proc_frame = 255 - proc_frame
     # find the hierarchy of nested contours
     contours, hierarchy = cv2.findContours(proc_frame, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE)
@@ -53,12 +55,12 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
     # 2. the marker contours should be approximate quadrilaterals
     approxes = [cv2.approxPolyDP(contours[i], cv2.arcLength(contours[i], True) * 0.05, True) for i in marker_indices]
     corner_nums = np.array(list(map(len, approxes)))
-    corner_number_match_indices = np.where(corner_nums == 4)[0]
+    corner_number_match_indices = np.where(corner_nums == 4)[0]  # just keep the shapes with four vertices
     marker_indices = marker_indices[corner_number_match_indices]
     if not debug and len(marker_indices) < 4:
         return None
 
-    # 3. the quadrilateral defined by position markers has to be convex from any perspective
+    # 3. the shape defined by all position markers has to be convex from any perspective
     marker_centroids = np.array([np.mean(app.squeeze(), axis=0).astype(np.int32) for app in approxes])
     convex_hull_indices = cv2.convexHull(marker_centroids, clockwise=True, returnPoints=False).squeeze()
     if not debug and len(convex_hull_indices) != len(marker_indices):
@@ -94,15 +96,8 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
     # source_points = inner_hull.astype(np.float32)
     source_points = np.array([outer_vertices[convex_hull_indices[i % 4]]
                               for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
-    target_points = np.array([
-        [5, 5],
-        [5, 495],
-        [495, 495],
-        [495, 5]
-    ], dtype=np.float32)
-
-    transform_matrix = cv2.getPerspectiveTransform(source_points, target_points)
-    proc_frame = cv2.warpPerspective(frame, transform_matrix, (500, 500))
+    target_points = get_target_coords()
+    proc_frame = transform_quadrilateral(frame, source_points, target_points)
 
     # drawing for optional debugging
     draw_frame = frame
@@ -226,6 +221,27 @@ def has_marker_hierarchy(hierarchy_element, hierarchy, level=0):
 def distance(points, other):
     diffs = points - other
     return np.sqrt(np.sum(diffs * diffs, axis=-1))
+
+
+def get_target_coords(target_img_w_h=(500, 500), padding: int = 5):
+    w, h = target_img_w_h
+
+    target_coords = np.array([
+        [padding, padding],
+        [padding, h - padding],
+        [w - padding, h - padding],
+        [w - padding, padding]
+    ], dtype=np.float32)
+
+    return target_coords
+
+
+def transform_quadrilateral(frame: np.ndarray, source_coords: np.ndarray, target_coords: np.ndarray,
+                            target_img_w_h=(500, 500)) -> np.ndarray:
+    transform_matrix = cv2.getPerspectiveTransform(source_coords, target_coords)
+    proc_frame = cv2.warpPerspective(frame, transform_matrix, target_img_w_h)
+
+    return proc_frame
 
 
 if __name__ == '__main__':
