@@ -17,3 +17,16 @@ class TestImageStandardization(TestCase):
         bad_impath = str(Path(__file__).parent / 'resources' / 'synthetisch' / 'no_board.jpg')
         bad_img = cv2.imread(bad_impath)
         self.assertIsNone(standardize_position(bad_img))
+
+    def test_recognition(self):
+        # images that should be successfully recognized
+        valid_paths = (Path(__file__).parent / 'resources' / 'fotos').glob('valid_*')
+        for impath in valid_paths:
+            img_ = cv2.imread(str(impath))
+            self.assertIsInstance(standardize_position(img_), np.ndarray)
+
+        # images that should be rejected
+        invalid_paths = [Path(__file__).parent / 'resources' / 'synthetisch' / 'no_board.jpg']
+        for impath in invalid_paths:
+            img_ = cv2.imread(str(impath))
+            self.assertIsNone(standardize_position(img_))

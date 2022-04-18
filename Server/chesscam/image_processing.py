@@ -83,7 +83,16 @@ def standardize_position(frame: np.ndarray, debug: str = '') -> Optional[np.ndar
     topleft_index = np.argmin(innermost_peris)
     hull_topleft = np.where(convex_hull_indices == topleft_index)[0][0]
 
-    source_points = np.array([marker_centroids[convex_hull_indices[i % 4]]
+    # Note: Instead of the centroids, it should be more stable to use e.g. the innermost vertices of each marker
+    # find the centroid of all markers, as a reference for vertex distance measurement
+    board_centroid = np.mean(marker_centroids, axis=0)
+    inner_vertices = np.array([vertices[np.argmin(distance(vertices, board_centroid))] for vertices in approxes])
+    # inner_hull = cv2.convexHull(inner_vertices, clockwise=True, returnPoints=True).squeeze()
+
+    # source_points = np.array([marker_centroids[convex_hull_indices[i % 4]]
+    #                           for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
+    # source_points = inner_hull.astype(np.float32)
+    source_points = np.array([inner_vertices[convex_hull_indices[i % 4]]
                               for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
     target_points = np.array([
         [0, 0],
@@ -214,14 +223,19 @@ def has_marker_hierarchy(hierarchy_element, hierarchy, level=0):
         return has_marker_hierarchy(hierarchy[hierarchy_element[2]], hierarchy, level=level + 1)
 
 
+def distance(points, other):
+    diffs = points - other
+    return np.sqrt(np.sum(diffs * diffs, axis=-1))
+
+
 if __name__ == '__main__':
     # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/no_board.jpg')
     # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/board.png')
     # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/small_board.png')
     # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/rotated_board.png')
     # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_rotated2.jpg')
-    input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_half_dark.jpg')
-    # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
+    # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_half_dark.jpg')
+    input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
     # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_normal.jpg')
     # stand_img = standardize_position(input_img, debug='contours+binarization')
     stand_img = standardize_position(input_img, debug='')
