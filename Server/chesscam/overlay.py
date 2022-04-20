@@ -1,3 +1,4 @@
+import numpy as np
 import math
 import itertools
 import cv2
@@ -9,15 +10,17 @@ class Overlay:
     def __init__(self, frame_shape, width: int = 8, height: int = 8, offset: Tuple[int, int] = (0, 0),
                  scale: float = 1.):
         self.frame_shape = frame_shape
+        print(frame_shape)
         self.width = width
         self.height = height
         self.frame_width = int(self.frame_shape[1])
         self.frame_height = int(self.frame_shape[0])
         self.offset = offset
         self.scale = scale
-        self.grid = self.make_grid()
+        self.grid = {}
+        self.update_grid(False)
 
-    def make_grid(self):
+    def update_grid(self, ignore_colors: bool):
         grid = {}
         for i in range(self.height):
             for j in range(self.width):
@@ -26,9 +29,19 @@ class Overlay:
                 edge0, edge1, edge2, edge3 = self.get_pixel_edges(j, i, self.offset, self.scale)
                 line_coordinates = self.get_start_and_endpoints_from_edges(edge0, edge1, edge2, edge3)
                 center_point = self.find_center_of_square(edge0, edge1, edge2, edge3)
-                grid[(i, j)] = {"line_coordinates": line_coordinates, "center_point": center_point, "color": random_col}
+                if ignore_colors: # Get old colors to new positions
+                    if (i, j) not in self.grid:
+                        raise ValueError("Grid is not initalized but ignore colors is False")
+                    grid[(i, j)] = {"line_coordinates": line_coordinates,
+                                    "center_point": center_point,
+                                    "color": self.grid[(i, j)]["color"]}
+                else:
+                    grid.update(
+                        {(i, j):
+                             {"line_coordinates": line_coordinates, "center_point": center_point, "color": random_col}}
+                        )
 
-        return grid
+        self.grid = grid
 
     def draw_line(self, img, start=(0, 0), end=(100, 100), line_thickness=2, col=(0, 255, 0)):
         img = img.copy()
@@ -60,10 +73,10 @@ class Overlay:
         edges = tuple(map(cast_to_int, edges))
         return edges
 
-    def change_drawing_options(self, offset: Tuple[int, int] = (0, 0), scale: float = 1.):
+    def change_drawing_options(self, offset: Tuple[int, int] = (0, 0), scale: float = 1., ignore_colors: bool = True):
         self.offset = offset
         self.scale = scale
-        self.grid = self.make_grid()
+        self.update_grid(ignore_colors=ignore_colors)
 
     def draw_grid(self, img):
         for k, v in self.grid.items():
@@ -73,11 +86,10 @@ class Overlay:
                 img = self.draw_line(img, startpoint, endpoint, col=v["color"])
             # draw circle in center:
             img = self.draw_circle(img, v["center_point"], col=v["color"])
-            """
-            for line in (line_coordinates[0], line_coordinates[-1]):
-                startpoint, endpoint = line
-                img = self.draw_rectangle(img, startpoint, endpoint, col=v["color"])
-            """
+            if k == (0, 0):
+                self.scan_square(img, v["center_point"], debug=True)
+            else:
+                self.scan_square(img, v["center_point"])
         return img
 
     def get_start_and_endpoints_from_edges(self, edge0, edge1, edge2, edge3):
@@ -94,3 +106,16 @@ class Overlay:
         pt0, pt1 = comb[diam.index(max(diam))]  # find points with biggest diameter
         center_point = (int((pt0[0] + pt1[0]) / 2), int((pt0[1] + pt1[1]) / 2))
         return center_point
+
+    @staticmethod
+    def scan_square(img, square_center: Tuple[int, int], scan_width: int = 2, debug=False):
+        s0 = square_center[0] - int(scan_width/2)
+        e0 = square_center[0] + int(scan_width/2)
+        s1 = square_center[1] - int(scan_width/2)
+        e1 = square_center[1] + int(scan_width/2)
+        region = img[s1:e1, s0:e0]
+        color_value = np.mean(region, axis=1).mean(axis=0)
+        if debug:
+            print(f"colorValue: Red {color_value[0]} Green {color_value[1]} Blue {color_value[2]}", )
+
+

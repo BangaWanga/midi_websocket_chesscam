@@ -5,6 +5,7 @@ import numpy as np
 class Camera:
     def __init__(self):
         self.cam = cv2.VideoCapture(0)
+    # ToDo: Add method to save color from camera
 
     def capture_frame_from_videostream(self):
         ret, frame = self.cam.read()
