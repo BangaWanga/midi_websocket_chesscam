@@ -30,16 +30,48 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
     # -------------------
     # Convert to grayscale
     proc_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
     # Blur to remove noise
-    proc_frame = cv2.GaussianBlur(proc_frame, ksize=(5, 5), sigmaX=0)
+    # proc_frame = cv2.GaussianBlur(proc_frame, ksize=(3, 3), sigmaX=0)
+    # Alternative: Erode and dilate to remove noise
+    # proc_frame = 255 - proc_frame
+    # kernel = np.ones((2, 2), np.uint8)
+    # proc_frame = cv2.erode(proc_frame, kernel, iterations=2)
+    # proc_frame = cv2.dilate(proc_frame, kernel, iterations=2)
+    # proc_frame = 255 - proc_frame
+    # Alternative 2: Non-local means de-noising (runs rather slowly)
+    # proc_frame = cv2.fastNlMeansDenoising(proc_frame)
+    # Alternative 3: Median blur
+    # proc_frame = cv2.medianBlur(proc_frame, ksize=3)
+    # Alternative 4: Bilateral filter
+    proc_frame = cv2.bilateralFilter(proc_frame, 5, 25, 20)
+
     if debug:
         preproc_frame = proc_frame.copy()  # save for later reference in debugging
+
+    draw_frame = frame
+    if 'histogram' in debug_modes:
+        draw_frame = cv2.cvtColor(preproc_frame, cv2.COLOR_GRAY2BGR)
+        proc_frame = draw_histogram(preproc_frame, draw_frame)
+        return proc_frame, None, None
 
     # ---- Binarization (we want an image that only contains full black or white)
     # adaptive binarization thresholding, using pixel neighborhood for threshold calculation
     proc_frame = binarize_adaptive(proc_frame)
+
+    # proc_frame = 255 - proc_frame
+    # kernel = np.ones((2, 2), np.uint8)
+    # proc_frame = cv2.erode(proc_frame, kernel, iterations=1)
+    # proc_frame = cv2.dilate(proc_frame, kernel, iterations=1)
+    # proc_frame = 255 - proc_frame
+
     if debug:
         bin_frame = proc_frame.copy()  # save for later reference in debugging
+
+    if 'binarization' in debug_modes:
+        draw_frame = cv2.cvtColor(bin_frame, cv2.COLOR_GRAY2BGR)
+        proc_frame = draw_frame
+        return proc_frame, None, None
 
     # ---- Find the position markers
     # find contours of black shapes in the preprocessed image
@@ -53,6 +85,7 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
     matches_marker_hierarchy = [has_marker_hierarchy(h, hierarchy=hierarchy[0]) for h in hierarchy[0]]
     marker_indices = np.where(matches_marker_hierarchy)[0]
     if not debug and len(marker_indices) < 4:
+        print('Too few marker hierarchies found')
         return None, None, None
 
     # 2. the marker contours should be approximate quadrilaterals
@@ -61,15 +94,17 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
     corner_number_match_indices = np.where(corner_nums == 4)[0]  # just keep the shapes with four vertices
     marker_indices = marker_indices[corner_number_match_indices]
     if not debug and len(marker_indices) < 4:
+        print('Number of vertices not satisfied')
         return None, None, None
 
     # 3. the shape defined by all position markers has to be convex from any perspective
     marker_centroids = np.array([np.mean(app.squeeze(), axis=0).astype(np.int32) for app in approxes])
     convex_hull_indices = cv2.convexHull(marker_centroids, clockwise=True, returnPoints=False).squeeze()
     if not debug and len(convex_hull_indices) != len(marker_indices):
+        print('Shape is not convex.')
         return None, None, None
 
-    print(f'{len(marker_indices)} position marker candidates found')
+    print(f'{len(marker_indices)} position marker candidates found', flush=True)
 
     # if the number of found position markers is not right, we can abort
     if not debug and len(marker_indices) != 4:
@@ -148,11 +183,12 @@ def binarize_otsu(frame):
 
 def binarize_adaptive(frame):
     """Adaptive binarization thresholding, using pixel neighborhood for threshold calculation"""
-    min_dim = np.min(frame.shape)
-    block_size = min_dim // 3
-    block_size += block_size % 2 + 1
-    proc_frame = cv2.adaptiveThreshold(frame, maxValue=255, adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                       thresholdType=cv2.THRESH_BINARY, blockSize=block_size, C=10)
+    # min_dim = np.min(frame.shape)
+    # block_size = min_dim // 10
+    # block_size += block_size % 2 + 1
+    block_size = 51
+    proc_frame = cv2.adaptiveThreshold(frame, maxValue=255, adaptiveMethod=cv2.ADAPTIVE_THRESH_MEAN_C,
+                                       thresholdType=cv2.THRESH_BINARY, blockSize=block_size, C=block_size / 2. - 3)
 
     return proc_frame
 
@@ -248,27 +284,42 @@ def transform_quadrilateral(frame: np.ndarray, source_coords: np.ndarray, target
 
 
 if __name__ == '__main__':
-    # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/no_board.jpg')
-    # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/board.png')
-    # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/small_board.png')
-    # input_img = cv2.imread('tests/test_image_processing/resources/synthetisch/rotated_board.png')
-    input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_rotated2.jpg')
-    # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_half_dark.jpg')
-    # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
-    # input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_normal.jpg')
-    # stand_img = standardize_position(input_img, debug='contours+binarization')
-    stand_img, _, _ = standardize_position(input_img, debug='')
+    test_mode = 'from_file'
 
-    # resize to fixed height
-    scale_fac = 800 / input_img.shape[0]
-    input_img = cv2.resize(input_img, (int(scale_fac * input_img.shape[1]), int(scale_fac * input_img.shape[0])))
-    cv2.imshow('Input image', input_img)
+    if test_mode == 'from_file':
+        input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
+        stand_img, _, _ = standardize_position(input_img, debug='')
 
-    if stand_img is not None:
         # resize to fixed height
-        scale_fac = 800 / stand_img.shape[0]
-        stand_img = cv2.resize(stand_img, (int(scale_fac * stand_img.shape[1]), int(scale_fac * stand_img.shape[0])))
-        cv2.imshow('Processed image', stand_img)
+        scale_fac = 800 / input_img.shape[0]
+        input_img = cv2.resize(input_img, (int(scale_fac * input_img.shape[1]), int(scale_fac * input_img.shape[0])))
+        cv2.imshow('Input image', input_img)
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+        if stand_img is not None:
+            cv2.imshow('Processed image', stand_img)
+
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    elif test_mode == 'from_stream':
+        capture = cv2.VideoCapture(0)  # internal cam
+        # capture = cv2.VideoCapture(4)  # phone cam
+
+        while True:
+            grabbed, frame = capture.read()
+            if not grabbed or cv2.waitKey(1) == ord("q"):
+                break
+
+            proc_frame, _, _ = standardize_position(frame, debug='')
+            # proc_frame, _, _ = standardize_position(frame, debug='histogram')
+            # proc_frame, _, _ = standardize_position(frame, debug='binarization')
+
+            if proc_frame is not None:
+                cv2.imshow('Processed', proc_frame)
+            else:
+                cv2.imshow('Processed', frame)
+
+            # time.sleep(0.1)
+
+        capture.release()
+        cv2.destroyAllWindows()
+
