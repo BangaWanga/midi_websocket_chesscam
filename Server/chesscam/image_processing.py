@@ -16,8 +16,9 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
     Args:
         frame: The input image
         debug: (optional) A string denoting which debug modes should be activated (separated by '+').
-            Supported modes are: 'histogram' and 'contours' (so e.g. 'histogram+contours' would also be accepted).
-            Default: ''. Note that some debug modes might return early and thus might prevent others to be applied.
+            Supported modes are: 'histogram', 'binarization' and 'contours' (so e.g. 'histogram+contours' would also
+            be accepted). Default: ''. Note that some debug modes might return early and thus might prevent
+            others to be applied.
 
     Returns:
         proc_frame: The transformed image in case of successful position detection or `None` in case of no success.
