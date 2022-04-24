@@ -16,9 +16,8 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
     Args:
         frame: The input image
         debug: (optional) A string denoting which debug modes should be activated (separated by '+').
-            Supported modes are: 'histogram', 'binarization' and 'contours' (so e.g. 'histogram+contours' would also
-            be accepted). Default: ''. Note that some debug modes might return early and thus might prevent
-            others to be applied.
+            Supported modes are: 'histogram', 'binarization', 'contours' and 'print' (so e.g. 'histogram+contours'
+            would also be accepted). Default: ''.
 
     Returns:
         proc_frame: The transformed image in case of successful position detection or `None` in case of no success.
@@ -50,11 +49,11 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
     if debug:
         preproc_frame = proc_frame.copy()  # save for later reference in debugging
 
-    draw_frame = frame
-    if 'histogram' in debug_modes:
-        draw_frame = cv2.cvtColor(preproc_frame, cv2.COLOR_GRAY2BGR)
-        proc_frame = draw_histogram(preproc_frame, draw_frame)
-        return proc_frame, None, None
+    # draw_frame = frame
+    # if 'histogram' in debug_modes:
+    #     draw_frame = cv2.cvtColor(preproc_frame, cv2.COLOR_GRAY2BGR)
+    #     proc_frame = draw_histogram(preproc_frame, draw_frame)
+    #     return proc_frame, None, None
 
     # ---- Binarization (we want an image that only contains full black or white)
     # adaptive binarization thresholding, using pixel neighborhood for threshold calculation
@@ -69,74 +68,108 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
     if debug:
         bin_frame = proc_frame.copy()  # save for later reference in debugging
 
-    if 'binarization' in debug_modes:
-        draw_frame = cv2.cvtColor(bin_frame, cv2.COLOR_GRAY2BGR)
-        proc_frame = draw_frame
-        return proc_frame, None, None
+    # if 'binarization' in debug_modes:
+    #     draw_frame = cv2.cvtColor(bin_frame, cv2.COLOR_GRAY2BGR)
+    #     proc_frame = draw_frame
+    #     return proc_frame, None, None
 
     # ---- Find the position markers
+    markers_found = True
     # find contours of black shapes in the preprocessed image
     # first, invert image (findContours() returns contours of white objects on black background)
     proc_frame = 255 - proc_frame
     # find the hierarchy of nested contours
     contours, hierarchy = cv2.findContours(proc_frame, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE)
+    # harmonize the output format - in case of no contours, `hierarchy` is `None`. For further processing,
+    # we make sure it is an empty list
+    if hierarchy is None:
+        hierarchy = []
+    else:
+        # if there are contours found, the hierarchy list is nested in an outside list, that we squeeze away here
+        hierarchy = hierarchy[0]
 
     # analyze the found contours and try to identify the position markers
     # 1. the position markers have exactly 2 child contours on 2 levels with no siblings
-    matches_marker_hierarchy = [has_marker_hierarchy(h, hierarchy=hierarchy[0]) for h in hierarchy[0]]
+    matches_marker_hierarchy = [has_marker_hierarchy(h, hierarchy=hierarchy) for h in hierarchy]
     marker_indices = np.where(matches_marker_hierarchy)[0]
-    if not debug and len(marker_indices) < 4:
-        print('Too few marker hierarchies found')
-        return None, None, None
+    if len(marker_indices) < 4:
+        markers_found = False
+        if 'print' in debug_modes:
+            print('Too few marker hierarchies found')
+        if not debug:
+            return None, None, None
 
     # 2. the marker contours should be approximate quadrilaterals
     approxes = [cv2.approxPolyDP(contours[i], cv2.arcLength(contours[i], True) * 0.05, True) for i in marker_indices]
     corner_nums = np.array(list(map(len, approxes)))
     corner_number_match_indices = np.where(corner_nums == 4)[0]  # just keep the shapes with four vertices
+    # apply the four-vertex-mask to the marker indices and the approximate polygons
     marker_indices = marker_indices[corner_number_match_indices]
-    if not debug and len(marker_indices) < 4:
-        print('Number of vertices not satisfied')
-        return None, None, None
+    approxes = [approxes[i] for i in corner_number_match_indices]
+    if len(marker_indices) < 4:
+        markers_found = False
+        if 'print' in debug_modes:
+            print('Number of vertices not satisfied')
+        if not debug:
+            return None, None, None
 
     # 3. the shape defined by all position markers has to be convex from any perspective
     marker_centroids = np.array([np.mean(app.squeeze(), axis=0).astype(np.int32) for app in approxes])
-    convex_hull_indices = cv2.convexHull(marker_centroids, clockwise=True, returnPoints=False).squeeze()
-    if not debug and len(convex_hull_indices) != len(marker_indices):
-        print('Shape is not convex.')
-        return None, None, None
+    if len(marker_centroids) > 0:
+        convex_hull_indices = cv2.convexHull(marker_centroids, clockwise=True, returnPoints=False).reshape((-1))
+    else:
+        convex_hull_indices = np.array([])
 
-    print(f'{len(marker_indices)} position marker candidates found', flush=True)
+    if len(convex_hull_indices) != len(marker_indices):
+        markers_found = False
+        if 'print' in debug_modes:
+            print('Shape is not convex.')
+        if not debug:
+            return None, None, None
+
+    if 'print' in debug_modes:
+        print(f'{len(marker_indices)} position marker candidates found', flush=True)
 
     # if the number of found position markers is not right, we can abort
-    if not debug and len(marker_indices) != 4:
-        return None, None, None
+    if len(marker_indices) != 4:
+        markers_found = False
+        if not debug:
+            return None, None, None
 
     marker_contours = [contours[i] for i in marker_indices]
     other_contours = [contours[i] for i in range(len(contours)) if i not in marker_indices]
 
     # ---- Transform the frame into standard form
-    # find the top left marker due to its smaller inner square
-    # Note: It would be more stable against extreme perspective distortions to do this step after a first transformation
-    # without sorting, for fairer size comparison (close vs. far objects).
-    # Maybe implement by rotation after transformation.
-    innermost_contours = [contours[hierarchy[0][hierarchy[0][i][2]][2]] for i in marker_indices]
-    innermost_peris = [cv2.arcLength(c, True) for c in innermost_contours]
-    topleft_index = np.argmin(innermost_peris)
-    hull_topleft = np.where(convex_hull_indices == topleft_index)[0][0]
+    source_coords, target_coords = None, None
+    if markers_found:
+        # find the top left marker due to its smaller inner square
+        # Note: It would be more stable against extreme perspective distortions to do this step
+        # after a first transformation
+        # without sorting, for fairer size comparison (close vs. far objects).
+        # Maybe implement by rotation after transformation.
+        innermost_contours = [contours[hierarchy[hierarchy[i][2]][2]] for i in marker_indices]
+        innermost_peris = [cv2.arcLength(c, True) for c in innermost_contours]
+        topleft_index = np.argmin(innermost_peris)
+        try:
+            hull_topleft = np.argwhere(convex_hull_indices == topleft_index).squeeze()
 
-    # Note: Instead of the centroids, it should be more stable to use e.g. the outermost vertices of each marker
-    # find the centroid of all markers, as a reference for vertex distance measurement
-    board_centroid = np.mean(marker_centroids, axis=0)
-    outer_vertices = np.array([vertices[np.argmax(distance(vertices, board_centroid))] for vertices in approxes])
-    # inner_hull = cv2.convexHull(outer_vertices, clockwise=True, returnPoints=True).squeeze()
+        except:
+            pass
+        print(marker_centroids, convex_hull_indices, topleft_index, hull_topleft)
 
-    # source_coords = np.array([marker_centroids[convex_hull_indices[i % 4]]
-    #                           for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
-    # source_coords = inner_hull.astype(np.float32)
-    source_coords = np.array([outer_vertices[convex_hull_indices[i % 4]]
-                              for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
-    target_coords = get_target_coords()
-    proc_frame = transform_quadrilateral(frame, source_coords, target_coords)
+        # Note: Instead of the centroids, it should be more stable to use e.g. the outermost vertices of each marker
+        # find the centroid of all markers, as a reference for vertex distance measurement
+        board_centroid = np.mean(marker_centroids, axis=0)
+        outer_vertices = np.array([vertices[np.argmax(distance(vertices, board_centroid))] for vertices in approxes])
+        # inner_hull = cv2.convexHull(outer_vertices, clockwise=True, returnPoints=True).squeeze()
+
+        # source_coords = np.array([marker_centroids[convex_hull_indices[i % 4]]
+        #                           for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
+        # source_coords = inner_hull.astype(np.float32)
+        source_coords = np.array([outer_vertices[convex_hull_indices[i % 4]]
+                                  for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
+        target_coords = get_target_coords()
+        proc_frame = transform_quadrilateral(frame, source_coords, target_coords)
 
     # drawing for optional debugging
     draw_frame = frame
@@ -285,7 +318,7 @@ def transform_quadrilateral(frame: np.ndarray, source_coords: np.ndarray, target
 
 
 if __name__ == '__main__':
-    test_mode = 'from_file'
+    test_mode = 'from_stream'
 
     if test_mode == 'from_file':
         input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
@@ -302,17 +335,25 @@ if __name__ == '__main__':
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     elif test_mode == 'from_stream':
-        capture = cv2.VideoCapture(0)  # internal cam
-        # capture = cv2.VideoCapture(4)  # phone cam
+        # capture = cv2.VideoCapture(0)  # internal cam
+        capture = cv2.VideoCapture('http://192.168.2.118:8080/video')  # phone cam
 
         while True:
             grabbed, frame = capture.read()
-            if not grabbed or cv2.waitKey(1) == ord("q"):
+            if cv2.waitKey(1) == ord("q"):
                 break
 
+            if not grabbed:
+                continue
+
+            # downscale if the image is too big for efficient processing
+            max_dim = np.max(frame.shape[:2])
+            if max_dim > 800:
+                scale_factor = 800 / max_dim
+                frame = cv2.resize(frame, (int(frame.shape[1] * scale_factor), int(frame.shape[0] * scale_factor)))
+
             proc_frame, _, _ = standardize_position(frame, debug='')
-            # proc_frame, _, _ = standardize_position(frame, debug='histogram')
-            # proc_frame, _, _ = standardize_position(frame, debug='binarization')
+            # proc_frame, _, _ = standardize_position(frame, debug='binarization+contours')
 
             if proc_frame is not None:
                 cv2.imshow('Processed', proc_frame)
