@@ -146,24 +146,18 @@ class Overlay:
             #                img = self.draw_line(img, startpoint, endpoint, col=v["color"])
             # draw circle in center:
             match self.display_option:
-                case DisplayOption.MatchingCircles:
-                    img = self.draw_matching_circles(img, v["center_point"])
-                case DisplayOption.RandomColors:
-                    img = self.draw_circle(img, v["center_point"], col=v["color"])
                 case DisplayOption.Calibrate:
                     img = self.calibrate(img, k, v)
                     img = self.draw_classes(img, v["center_point"])
-                case DisplayOption.Classes:
+                case DisplayOption.Normal:
                     img = self.draw_classes(img, v["center_point"])
-                case DisplayOption.ClassesRangeBased:
-                    img = self.draw_classes_range_based(img, v["center_point"], v["edges"], k)
         img = self.draw_cursor(img)
         return img
 
     def calibrate(self, img, position: tuple, _field_info: dict):
         if self.selected_color is None or not self.calibrate_field:
             return img
-        color = self.scan_square2(img, position)
+        color = self.get_square_color(img, position)
         if position == self.cursor_field:
             print("Adding sample ", color, " for field ", position, " and color ", self.selected_color, self.color_predictor.colors[self.selected_color])
             self.color_predictor.add_sample(self.selected_color, color)
@@ -172,7 +166,7 @@ class Overlay:
         return img
 
     def draw_classes(self, img, center_point):  # TODO: If Calibrate mode, draw error to UI somehow
-        color = self.scan_square(img, center_point)
+        color = self.get_square_color(img, center_point)
         color_class, error = self.color_predictor.predict_color(color)
         col_complementary = self.color_predictor.get_complementary_color(color)
         text_offset = (- int(self.rect_width / 2), - int(self.rect_height / 2))
@@ -187,7 +181,7 @@ class Overlay:
         return img
 
     def draw_matching_circles(self, img, center_point: (0, 0), debug=False):
-        col = self.scan_square(img, center_point)
+        col = self.get_square_color(img, center_point)
         img = self.draw_circle(img, center_point, col=col, radius=20)
         return img
 
@@ -229,18 +223,9 @@ class Overlay:
 
     def move_cursor(self, axis: int, value: float):
         self.cursor[axis % 2] = value  # with % 2 we can address both joysticks
-        # print(f"axis {axis} value {value}")
         self.update_cursor()
 
-    @staticmethod
-    def scan_square(img, square_center: Tuple[int, int], scan_width: int = 2, debug=False):
-        region = Overlay.get_region(img, square_center, scan_width)
-        color_value = np.mean(region, axis=1).mean(axis=0)
-        if debug:
-            print(f"colorValue: Red {color_value[0]} Green {color_value[1]} Blue {color_value[2]}", )
-        return color_value
-
-    def scan_square2(self, img, position: Tuple[int, int]):
+    def get_square_color(self, img, position: Tuple[int, int]):
         x_from = np.array((self.frame_width * position[0] / self.width) + self.offset[0]) * self.scale
         x_to = np.array(((self.frame_width * (position[0] + 1)) / self.width) + self.offset[0]) * self.scale
         y_from = np.array(((self.frame_height * position[1]) / self.height) + self.offset[1]) * self.scale
@@ -249,9 +234,3 @@ class Overlay:
         aoi = img[y_from:y_to, x_from:x_to] # area of interest
         return np.mean(aoi, axis=1).mean(axis=0)
 
-    def aquire_data(self, img, color: int):
-        # assert color in [1, 2, 3]
-        for x in range(self.width):
-            for y in range(self.height):
-                center_point = self.grid[(x, y)]["center_point"]
-                X = self.scan_square(img, center_point)  # X is a rgb value
