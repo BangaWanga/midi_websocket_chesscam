@@ -1,10 +1,10 @@
 import cv2
 import numpy as np
-
 from Server.chesscam.camera import Camera
 from Server.chesscam.centroids_deprecated import Centroids
 from Server.chesscam.overlay import Overlay
 from enum import Enum
+from game_controller import Game_Controller, ControllerValueTypes, ControllerButtons
 
 
 class ControlKeys(Enum):
@@ -41,19 +41,51 @@ class ChessCam:
         self.display_size = 800, 600
         self.training_rgb = (False, False, False)
         self.fitting_rgb_range = (False, False, False)
+        self.game_controller = Game_Controller()
 
     def update(self):
         frame = self.camera.capture_frame_from_videostream()
         img = self.overlay.draw_grid(frame)
-        if any(self.fitting_rgb_range):
-            self.overlay.add_sample(img, field_pos=(0, 0), color_label=self.fitting_rgb_range.index(True))
-            self.fitting_rgb_range = (False, False, False)
-        if any(self.training_rgb):
-            self.overlay.train_all_fields(img, self.training_rgb.index(True))
-            self.training_rgb = (False, False, False)
-            print("Trained")
+        self.overlay.update_cursor()
+#        if any(self.fitting_rgb_range):
+#            self.overlay.add_sample(img, field_pos=(0, 0), color_label=self.fitting_rgb_range.index(True))
+#            self.fitting_rgb_range = (False, False, False)
+#        if any(self.training_rgb):
+#            self.overlay.train_all_fields(img, self.training_rgb.index(True))
+#            self.training_rgb = (False, False, False)
+#            print("Trained")
         cv2.imshow('computer visions', img)
         self.process_key_input()
+        self.process_controller_input()
+
+    def process_controller_input(self):
+        actions = self.game_controller.get_inputs()
+        button_down = False
+        button_up = False
+        color_class = None
+
+        for a in actions:
+            match a[0]:
+                case ControllerValueTypes.JogWheel:
+                    self.overlay.move_cursor(a[2].axis, a[2].value)
+                case ControllerValueTypes.KEY_UP:
+                    button_up = True
+                case ControllerValueTypes.KEY_DOWN:
+                    button_down = True
+            match a[1]:
+                case ControllerButtons.A_BTN:
+                    color_class = 0
+                case ControllerButtons.B_BTN:
+                    color_class = 1
+                case ControllerButtons.X_BTN:
+                    color_class = 2
+                case ControllerButtons.Y_BTN:
+                    color_class = 3
+                case ControllerButtons.BACK_BTN:
+                    if button_down:
+                        self.overlay.color_predictor.save_samples() # save to config file
+        if button_down and color_class is not None:
+            self.overlay.select_field(color_class)
 
     def process_key_input(self):
         key = cv2.waitKey(1)
@@ -63,8 +95,8 @@ class ChessCam:
         offset = self.overlay.offset
         scale = self.overlay.scale
         if key != -1:
-            print(key)
             if key in self.control_map:
+
                 action = self.control_map[key]
                 match action:
                     case ControlKeys.MoveGridUp:
@@ -107,3 +139,7 @@ if __name__ == "__main__":
 
     while True:
         cam.update()
+
+with open("",
+          "w") as outfile:
+    pass

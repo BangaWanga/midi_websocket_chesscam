@@ -6,22 +6,11 @@ from typing import Tuple
 import random
 from enum import Enum
 from color_predictor import RangeBased
-from typing import Optional
 
 
 class DisplayOption(Enum):
-    MatchingCircles = 0
-    RandomColors = 1
-    Classes = 2
-    ClassesRangeBased = 3
-    Calibrate = 4
-
-
-class ColorPrediction(Enum):
-    Perceptron = 0
-    Error = 1
-    TTest = 2
-    LDA = 3
+    Normal = 0
+    Calibrate = 1
 
 
 class Overlay:
@@ -35,9 +24,9 @@ class Overlay:
         self.grid = {}
         self.update_grid(False)
         self.display_option = DisplayOption.Calibrate
-        self.color_predictor = RangeBased()  # ToDo: Remove
+        self.color_predictor = RangeBased()
         #   self.range_based = TTest()
-        self.cursor_field = (0, 0)
+        self.cursor_field = (0, 0)  # ToDo: Less variables for cursor
         self.cursor = np.array([0., 0.])
         self.cursor_absolute = (0., 0.)
         self.selected_color = None
@@ -58,24 +47,8 @@ class Overlay:
     def get_rect_start_position(self, position: Tuple[int, int]):  # left upper corner
         return int((self.frame_width / self.width) * position[0]), int((self.frame_height / self.height) * position[1])
 
-    def train_all_fields(self, img, color: int):
-        # assert color in [1, 2, 3]
-        for x in range(self.width):
-            for y in range(self.height):
-                center_point = self.grid[(x, y)]["center_point"]
-                X = self.scan_square(img, center_point)  # X is a rgb value
-                self.train_color(X, color, )
-
-    #    def train_color(self, img, color: int, learn_rate=0.1):
-    #        self.color_predictor.train(img, color, learn_rate)
-
-    #    def add_sample(self, img, field_pos: Tuple[int, int], color_label: int):
-    #        center_point = self.grid[field_pos]["center_point"]
-    #        X = self.scan_square(img, center_point)  # X is a rgb value
-    #        self.range_based.submit_data(X, color_label)
-
     def update_grid(self, ignore_colors: bool):
-        grid = {}
+        grid = {}   # ToDo: Pull values from self.grid and only update those that changed
         for i in range(self.height):
             for j in range(self.width):
                 random_col = tuple(random.randint(0, 255) for _ in range(3))
@@ -107,7 +80,7 @@ class Overlay:
         cv2.line(img, start, end, col, thickness=line_thickness)
         return img
 
-    def draw_rectangle(self, img, pts1=(0, 0), pts2=(100, 100), col=(0, 0, 0)):
+    def draw_rectangle(self, img, pts1=(0, 0), pts2=(100, 100), col=(0, 0, 0)): # ToDo: Enable moving rects with WASD
         img = img.copy()
         cv2.rectangle(img, pts1, pts2, color=col, thickness=3)
         return img
@@ -198,29 +171,19 @@ class Overlay:
             # self.color_predictor.add_sample(self.selected_color, color)
         return img
 
-    def draw_classes_range_based(self, img, center_point, edges, position):
-        color = self.scan_square2(img, position)
-        color_class, _error = self.color_predictor.predict_color(color)
-        # color_class = self.range_based.check_color(color)
-        # print("Color Class: ", color_class)
-        col_complementary = self.color_predictor.get_complementary_color(color)
-        text_offset = (- int(self.rect_width / 2), - int(self.rect_height / 2))
-        center_point = (center_point[0] + text_offset[0], center_point[1] + text_offset[1])
-        gray = cv2.cvtColor(img.copy(), cv2.COLOR_RGB2GRAY)
-        error2color = cv2.cvtColor(np.array(_error * 255).astype(np.uint8), cv2.COLOR_GRAY2RGB).reshape(3)
-        error2color = tuple(np.array(error2color) / 255)
-        x = f"{str(_error)}"
-        img = self.write_text(img, f"{color_class}", start_pos=center_point,
-                              font_color=error2color, font_scale=0.65)
-        return img
-
-    def draw_classes(self, img, center_point):
+    def draw_classes(self, img, center_point):  # TODO: If Calibrate mode, draw error to UI somehow
         color = self.scan_square(img, center_point)
         color_class, error = self.color_predictor.predict_color(color)
         col_complementary = self.color_predictor.get_complementary_color(color)
         text_offset = (- int(self.rect_width / 2), - int(self.rect_height / 2))
         center_point = (center_point[0] + text_offset[0], center_point[1] + text_offset[1])
+
+        # error2color = cv2.cvtColor(np.array(error * 255).astype(np.uint8), cv2.COLOR_GRAY2RGB).reshape(3)
+        # error2color = tuple(np.array(error2color) / 255)
+        # x = f"{str(_error)}"
+
         img = self.write_text(img, f"{color_class}", start_pos=center_point, font_color=col_complementary)
+
         return img
 
     def draw_matching_circles(self, img, center_point: (0, 0), debug=False):

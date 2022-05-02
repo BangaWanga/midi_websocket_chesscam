@@ -17,7 +17,7 @@ class Gui(QWidget):
         self.chess_fields_set = False
         self.notch = 0  # -1, 0 or 1
         self.initUI()
-        self.step =0
+        self.step = 0
 
         #self.showMaximized()
 
