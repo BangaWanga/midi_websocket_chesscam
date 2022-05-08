@@ -302,15 +302,23 @@ def get_board_parameters(target_img_w_h=(500, 500), padding: int = 5) -> Tuple[n
     """Compute the offset of the board and single field dimensions
 
     Args:
-        target_img_w_h:
-        padding:
+        target_img_w_h: A tuple of the width and height of the processed image in pixels
+        padding: The number of pixels along the processed image's border that the position markers are padded inwards
 
     Returns:
-        origin: 2-array of integer pixel coordinates of upper left board corner in target image
+        origin: Array of shape (2,) of integer pixel coordinates (x, y) of the upper left board corner in target image
         field_width: The width of a single chess field in pixels
         field_height: The height of a single chess field in pixels
     """
-    w, h = target_img_w_h
+    w, h = target_img_w_h  # the width and height of the processed image
+
+    # the coordinates of the outermost corners of the board including the position markers
+    marker_corner_coords = np.array([
+        [padding, padding],
+        [padding, h - padding],
+        [w - padding, h - padding],
+        [w - padding, padding]
+    ], dtype=np.float32)
 
     return None
 
