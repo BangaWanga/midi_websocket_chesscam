@@ -5,7 +5,8 @@ import numpy as np
 from functools import partial
 
 
-def standardize_position(frame: np.ndarray, debug: str = '') \
+def standardize_position(frame: np.ndarray, target_img_w_h: Tuple[int, int] = (500, 500),
+                         padding: int = 5, debug: str = '') \
         -> Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
     """Transform the input frame in a way that maps the board fields to standard locations
 
@@ -15,6 +16,8 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
 
     Args:
         frame: The input image
+        target_img_w_h: A tuple of the width and height of the processed image in pixels
+        padding: The number of pixels along the processed image's border that the position markers are padded inwards
         debug: (optional) A string denoting which debug modes should be activated (separated by '+').
             Supported modes are: 'histogram', 'binarization', 'contours' and 'print' (so e.g. 'histogram+contours'
             would also be accepted). Default: ''.
@@ -156,7 +159,7 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
         # source_coords = inner_hull.astype(np.float32)
         source_coords = np.array([outer_vertices[convex_hull_indices[i % 4]]
                                   for i in range(hull_topleft, hull_topleft + 4)]).astype(np.float32)
-        target_coords = get_target_coords()
+        target_coords = get_target_coords(target_img_w_h, padding)
         proc_frame = transform_quadrilateral(frame, source_coords, target_coords)
 
     # drawing for optional debugging
@@ -185,7 +188,7 @@ def weighted_var(xs, weights):
 def binarize_otsu_own(frame):
     """Our own implementation of Otsu's method for global binarization"""
     # Analyze histogram to find a good binarization threshold
-    hist = cv2.calcHist(images=[proc_frame], channels=[0], mask=None, histSize=[256], ranges=[0, 256])
+    hist = cv2.calcHist(images=[frame], channels=[0], mask=None, histSize=[256], ranges=[0, 256])
 
     hist_x = np.arange(hist.shape[0])
     var_losses = np.array([weighted_var(hist_x[:t], hist[:t, 0] + 1) + weighted_var(hist_x[t + 1:], hist[t + 1:, 0] + 1)
