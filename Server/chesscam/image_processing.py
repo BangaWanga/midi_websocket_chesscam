@@ -144,7 +144,6 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
 
         except:
             pass
-        print(marker_centroids, convex_hull_indices, topleft_index, hull_topleft)
 
         # Note: Instead of the centroids, it should be more stable to use e.g. the outermost vertices of each marker
         # find the centroid of all markers, as a reference for vertex distance measurement
@@ -298,7 +297,7 @@ def get_target_coords(target_img_w_h=(500, 500), padding: int = 5):
     return target_coords
 
 
-def get_board_parameters(target_img_w_h=(500, 500), padding: int = 5) -> Tuple[np.ndarray, int, int]:
+def get_board_parameters(target_img_w_h: Tuple[int, int], padding: int) -> Tuple[np.ndarray, int, int]:
     """Compute the offset of the board and single field dimensions
 
     Args:
@@ -312,15 +311,23 @@ def get_board_parameters(target_img_w_h=(500, 500), padding: int = 5) -> Tuple[n
     """
     w, h = target_img_w_h  # the width and height of the processed image
 
-    # the coordinates of the outermost corners of the board including the position markers
-    marker_corner_coords = np.array([
-        [padding, padding],
-        [padding, h - padding],
-        [w - padding, h - padding],
-        [w - padding, padding]
-    ], dtype=np.float32)
+    # our reference distance measurement is the distance between the adjacent corners;
+    dist_hori = w - 2 * padding  # the width minus the paddings on left and right borders
+    dist_vert = h - 2 * padding  # the height minus the paddings on top and bottom borders
+    # in the template this distance is 96 units, so we can calculate the size of one unit in image coordinates
+    unit_hori = dist_hori / 96.0
+    unit_vert = dist_vert / 96.0
 
-    return None
+    # the fields have width and height of 10 units
+    field_width = 10 * unit_hori
+    field_heigth = 10 * unit_vert
+
+    # the distance from the top left marker outer corner to the first field corner is 8 units in both dimensions
+    x0 = padding + 8 * unit_hori
+    y0 = padding + 8 * unit_vert
+    origin = np.array([x0, y0], dtype=int)
+
+    return origin, int(field_width), int(field_heigth)
 
 
 def transform_quadrilateral(frame: np.ndarray, source_coords: np.ndarray, target_coords: np.ndarray,
@@ -333,7 +340,7 @@ def transform_quadrilateral(frame: np.ndarray, source_coords: np.ndarray, target
 
 if __name__ == '__main__':
     """ The following code is meant for debugging purposes """
-    test_mode = 'from_stream'  # 'from_stream' or 'from_file'
+    test_mode = 'from_file'  # 'from_stream' or 'from_file'
 
     if test_mode == 'from_file':
         input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
@@ -345,6 +352,19 @@ if __name__ == '__main__':
         cv2.imshow('Input image', input_img)
 
         if stand_img is not None:
+            origin, field_w, field_h = get_board_parameters((500, 500), 5)
+            diag_vec = np.array([field_w, field_h])
+            width_vec = np.array([field_w, 0])
+            height_vec = np.array([0, field_h])
+
+            for x_ind in range(8):
+                for y_ind in range(8):
+                    field_origin = origin + x_ind * width_vec + y_ind * height_vec
+                    stand_img = cv2.rectangle(stand_img,
+                                              field_origin,
+                                              field_origin + np.array([field_w, field_h]),
+                                              (0, 0, 255), 2)
+
             cv2.imshow('Processed image', stand_img)
 
         cv2.waitKey(0)
