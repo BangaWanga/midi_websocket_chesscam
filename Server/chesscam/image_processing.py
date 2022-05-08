@@ -324,7 +324,8 @@ def transform_quadrilateral(frame: np.ndarray, source_coords: np.ndarray, target
 
 
 if __name__ == '__main__':
-    test_mode = 'from_stream'
+    """ The following code is meant for debugging purposes """
+    test_mode = 'from_stream'  # 'from_stream' or 'from_file'
 
     if test_mode == 'from_file':
         input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
@@ -370,4 +371,3 @@ if __name__ == '__main__':
 
         capture.release()
         cv2.destroyAllWindows()
-
