@@ -49,12 +49,6 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
     if debug:
         preproc_frame = proc_frame.copy()  # save for later reference in debugging
 
-    # draw_frame = frame
-    # if 'histogram' in debug_modes:
-    #     draw_frame = cv2.cvtColor(preproc_frame, cv2.COLOR_GRAY2BGR)
-    #     proc_frame = draw_histogram(preproc_frame, draw_frame)
-    #     return proc_frame, None, None
-
     # ---- Binarization (we want an image that only contains full black or white)
     # adaptive binarization thresholding, using pixel neighborhood for threshold calculation
     proc_frame = binarize_adaptive(proc_frame)
@@ -67,11 +61,6 @@ def standardize_position(frame: np.ndarray, debug: str = '') \
 
     if debug:
         bin_frame = proc_frame.copy()  # save for later reference in debugging
-
-    # if 'binarization' in debug_modes:
-    #     draw_frame = cv2.cvtColor(bin_frame, cv2.COLOR_GRAY2BGR)
-    #     proc_frame = draw_frame
-    #     return proc_frame, None, None
 
     # ---- Find the position markers
     markers_found = True
@@ -309,6 +298,23 @@ def get_target_coords(target_img_w_h=(500, 500), padding: int = 5):
     return target_coords
 
 
+def get_board_parameters(target_img_w_h=(500, 500), padding: int = 5) -> Tuple[np.ndarray, int, int]:
+    """Compute the offset of the board and single field dimensions
+
+    Args:
+        target_img_w_h:
+        padding:
+
+    Returns:
+        origin: 2-array of integer pixel coordinates of upper left board corner in target image
+        field_width: The width of a single chess field in pixels
+        field_height: The height of a single chess field in pixels
+    """
+    w, h = target_img_w_h
+
+    return None
+
+
 def transform_quadrilateral(frame: np.ndarray, source_coords: np.ndarray, target_coords: np.ndarray,
                             target_img_w_h=(500, 500)) -> np.ndarray:
     transform_matrix = cv2.getPerspectiveTransform(source_coords, target_coords)
@@ -335,8 +341,8 @@ if __name__ == '__main__':
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     elif test_mode == 'from_stream':
-        # capture = cv2.VideoCapture(0)  # internal cam
-        capture = cv2.VideoCapture('http://192.168.2.118:8080/video')  # phone cam
+        capture = cv2.VideoCapture(0)  # internal cam
+        # capture = cv2.VideoCapture('http://192.168.2.117:8080/video')  # phone cam
 
         while True:
             grabbed, frame = capture.read()
@@ -353,7 +359,7 @@ if __name__ == '__main__':
                 frame = cv2.resize(frame, (int(frame.shape[1] * scale_factor), int(frame.shape[0] * scale_factor)))
 
             proc_frame, _, _ = standardize_position(frame, debug='')
-            # proc_frame, _, _ = standardize_position(frame, debug='binarization+contours')
+            # proc_frame, _, _ = standardize_position(frame, debug='histogram')
 
             if proc_frame is not None:
                 cv2.imshow('Processed', proc_frame)
