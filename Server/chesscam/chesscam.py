@@ -1,8 +1,6 @@
 import cv2
-import numpy as np
 
 from Server.chesscam.camera import Camera
-from Server.chesscam.centroids import Centroids
 from Server.chesscam.overlay import Overlay
 
 
