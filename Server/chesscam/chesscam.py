@@ -1,8 +1,6 @@
 import cv2
-import numpy as np
 from Server.chesscam.camera import Camera
-from Server.chesscam.centroids_deprecated import Centroids
-from Server.chesscam.overlay import Overlay
+from Server.chesscam.overlay_New import Overlay
 from enum import Enum
 from game_controller import Game_Controller, ControllerValueTypes, ControllerButtons
 
@@ -45,8 +43,7 @@ class ChessCam:
 
     def update(self):
         frame = self.camera.capture_frame_from_videostream()
-        img = self.overlay.draw_grid(frame)
-        self.overlay.update_cursor()
+        frame = self.overlay.draw_grid(frame)
 #        if any(self.fitting_rgb_range):
 #            self.overlay.add_sample(img, field_pos=(0, 0), color_label=self.fitting_rgb_range.index(True))
 #            self.fitting_rgb_range = (False, False, False)
@@ -54,7 +51,7 @@ class ChessCam:
 #            self.overlay.train_all_fields(img, self.training_rgb.index(True))
 #            self.training_rgb = (False, False, False)
 #            print("Trained")
-        cv2.imshow('computer visions', img)
+        cv2.imshow('computer visions', frame)
         self.process_key_input()
         self.process_controller_input()
 
@@ -96,7 +93,6 @@ class ChessCam:
         scale = self.overlay.scale
         if key != -1:
             if key in self.control_map:
-
                 action = self.control_map[key]
                 match action:
                     case ControlKeys.MoveGridUp:
@@ -114,14 +110,10 @@ class ChessCam:
                     case ControlKeys.ScrollDisplayOptions:    # 9 on keyboard
                         self.overlay.scroll_display_option()
                     case ControlKeys.TrainRed:    # R on keyboard
-                        print("Train Red")
-                        #self.training_rgb = (True, False, False)
                         self.fitting_rgb_range = (True, False, False)
                     case ControlKeys.TrainGreen:    # G on keyboard
-                        #self.training_rgb = (False, True, False)
                         self.fitting_rgb_range = (False, True, False)
                     case ControlKeys.TrainBlue:    # B on keyboard
-                        #self.training_rgb = (False, False, True)
                         self.fitting_rgb_range = (False, False, True)
                     case _:
                         print("KEEY: ", key)

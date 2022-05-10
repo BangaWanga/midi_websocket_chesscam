@@ -1,10 +1,9 @@
 import numpy as np
 
 
-
-client_greeting=">Client connected"
-server_greeting=">Server connected"
-chunksize =15
+client_greeting = ">Client connected"
+server_greeting = ">Server connected"
+chunksize = 15
 port = 8765
 ip_local = "localhost"
 ip = '192.168.1.3'

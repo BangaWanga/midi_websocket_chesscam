@@ -7,15 +7,19 @@ import random
 from enum import Enum
 from color_predictor import RangeBased
 
-
 class DisplayOption(Enum):
     Normal = 0
     Calibrate = 1
+
+# ToDo:
+# 1. Get picture
+# Different procedures: Check colors each n-steps
 
 
 class Overlay:
     def __init__(self, frame_shape, width: int = 8, height: int = 8, offset: Tuple[int, int] = (0, 0),
                  scale: float = 1.):
+        self.colors = ("green", "red", "blue", "yellow")
         self.width = width
         self.height = height
         self.frame_height, self.frame_width = frame_shape
@@ -24,13 +28,18 @@ class Overlay:
         self.grid = {}
         self.update_grid(False)
         self.display_option = DisplayOption.Calibrate
-        self.color_predictor = RangeBased()
-        #   self.range_based = TTest()
+        self.color_predictor = RangeBased(colors=self.colors)
         self.cursor_field = (0, 0)  # ToDo: Less variables for cursor
         self.cursor = np.array([0., 0.])
         self.cursor_absolute = (0., 0.)
         self.selected_color = None
         self.calibrate_field = False  # If this value is tuple[int, int], the selected field is calibrated with selected color
+        # flattened grid_positions [(0,0), (0, 1), ...]
+        self.grid_positions = list(itertools.chain(*[[(i, j) for j in range(self.width)] for i in range(self.height)]))
+
+        # experimental purely numpy grid
+        self.np_grid = np.zeros(shape=(self.width, self.height, len(self.colors)), dtype=int)
+        self.color_buffer = 5   # how many concurrent frames a color can be guessed
 
     @property
     def rect_width(self):
@@ -81,7 +90,6 @@ class Overlay:
         return img
 
     def draw_rectangle(self, img, pts1=(0, 0), pts2=(100, 100), col=(0, 0, 0)): # ToDo: Enable moving rects with WASD
-        img = img.copy()
         cv2.rectangle(img, pts1, pts2, color=col, thickness=3)
         return img
 
@@ -118,11 +126,9 @@ class Overlay:
         edges = tuple(map(cast_to_int, edges))
         return edges  # upper_left, upper_right, lower_left, lower_right
 
-    def change_drawing_options(self, offset: Tuple[int, int] = (0, 0), scale: float = 1., ignore_colors: bool = True):
+    def change_drawing_options(self, offset: Tuple[int, int] = (0, 0), scale: float = 1.):
         self.offset = offset
         self.scale = scale
-        self.update_grid(ignore_colors=ignore_colors)
-        # ToDo: Take care that we cant exit screen
 
     def draw_cursor(self, img):
         if self.cursor_field is None:
@@ -134,25 +140,19 @@ class Overlay:
         return img
 
     def draw_grid(self, img, grid_color=(100, 50, 50)):  # ToDo: Make differentiation between display modes earlier
-        for k, v in self.grid.items():
-            left_upper_corner = self.get_rect_start_position(k)
+        img = np.ascontiguousarray(img, dtype=np.uint8)
+        for pos in self.grid_positions:
+            left_upper_corner = self.get_rect_start_position(pos)
             right_lower_corner = int(left_upper_corner[0] + self.rect_width), int(
                 left_upper_corner[1] + self.rect_height)
             img = self.draw_rectangle(img, left_upper_corner, right_lower_corner, col=grid_color)
-
-            #            line_coordinates = v["line_coordinates"]
-            #            for line in line_coordinates:
-            #                startpoint, endpoint = line
-            #                img = self.draw_line(img, startpoint, endpoint, col=v["color"])
-            # draw circle in center:
-            match self.display_option:
-                case DisplayOption.Calibrate:
-                    img = self.calibrate(img, k, v)
-                    img = self.draw_classes(img, v["center_point"])
-                case DisplayOption.Normal:
-                    img = self.draw_classes(img, v["center_point"])
+            img = self.draw_classes(img, pos)
         img = self.draw_cursor(img)
+        self.update_cursor()
         return img
+
+    def center_point_from_grid_position(self, position) -> Tuple[int, int]:
+        return int((position[0] + .5) * self.rect_width), int((position[1] + .5) * self.rect_height)
 
     def calibrate(self, img, position: tuple, _field_info: dict):
         if self.selected_color is None or not self.calibrate_field:
@@ -165,22 +165,42 @@ class Overlay:
             # self.color_predictor.add_sample(self.selected_color, color)
         return img
 
-    def draw_classes(self, img, center_point):  # TODO: If Calibrate mode, draw error to UI somehow
-        color = self.get_square_color(img, center_point)
+    def update_color_values(self, color, position: Tuple[int, int], error_threshold: float = 0.3):
         color_class, error = self.color_predictor.predict_color(color)
+        if error == -1 or error > error_threshold:
+            self.np_grid[position[0]][position[1]] = self.np_grid[position[0]][position[1]] - 1
+        else:
+            diff = np.array([-1 for _ in self.colors])
+            diff[color_class] = 1
+            self.np_grid[position[0]][position[1]] += diff
+        self.np_grid[position[0]][position[1]] = np.clip(self.np_grid[position[0]][position[1]], 0, self.color_buffer)
+
+    def get_current_color_class(self, position: Tuple[int, int]):
+        min_count = max(1, int(self.color_buffer / 2)) # how many times a color has to be counted before it is valid
+        if (self.np_grid[position[0]][position[1]] < min_count).all():
+           return None
+        return int(np.argmax(self.np_grid[position[0]][position[1]]))
+
+    def draw_classes(self, img, position: Tuple[int, int]):  # TODO: If Calibrate mode, draw error to UI somehow
+        color = self.get_square_color(img, position)
+        self.update_color_values(color, position)
         col_complementary = self.color_predictor.get_complementary_color(color)
         text_offset = (- int(self.rect_width / 2), - int(self.rect_height / 2))
+        center_point = self.center_point_from_grid_position(position)
         center_point = (center_point[0] + text_offset[0], center_point[1] + text_offset[1])
 
         # error2color = cv2.cvtColor(np.array(error * 255).astype(np.uint8), cv2.COLOR_GRAY2RGB).reshape(3)
         # error2color = tuple(np.array(error2color) / 255)
         # x = f"{str(_error)}"
+        color_str = "NONE"
+        if not (self.np_grid[position[0]][position[1]] == 0).all():
+            color_class = int(np.argmax(self.np_grid[position[0]][position[1]]))
+            color_str = self.colors[color_class]
 
-        img = self.write_text(img, f"{color_class}", start_pos=center_point, font_color=col_complementary)
-
+        img = self.write_text(img, f"{color_str}", start_pos=center_point, font_color=col_complementary)
         return img
 
-    def draw_matching_circles(self, img, center_point: (0, 0), debug=False):
+    def draw_matching_circles(self, img, center_point: (0, 0)):
         col = self.get_square_color(img, center_point)
         img = self.draw_circle(img, center_point, col=col, radius=20)
         return img
@@ -209,7 +229,7 @@ class Overlay:
         region = img[s1:e1, s0:e0]
         return region
 
-    def update_cursor(self, sensitivity_threshold=.1, movement_speed=0.05):
+    def update_cursor(self, sensitivity_threshold=.15, movement_speed=0.05):
         add_x = self.cursor[0] if abs(self.cursor[0]) > sensitivity_threshold else 0.
         add_y = self.cursor[1] if abs(self.cursor[1]) > sensitivity_threshold else 0.
         if add_x == 0. and add_y == 0.:
@@ -233,4 +253,3 @@ class Overlay:
         y_from, y_to, x_from, x_to = y_from.astype(int), y_to.astype(int), x_from.astype(int), x_to.astype(int)
         aoi = img[y_from:y_to, x_from:x_to] # area of interest
         return np.mean(aoi, axis=1).mean(axis=0)
-

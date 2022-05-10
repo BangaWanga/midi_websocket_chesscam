@@ -11,6 +11,7 @@ class Camera:
         ret, frame = self.cam.read()
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         if ret:
+            #return frame_rgb
             return self.flip(frame_rgb)
         else:
             raise ValueError("Can't read frame")

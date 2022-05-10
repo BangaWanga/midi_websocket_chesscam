@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Optional
 import datetime
 import os
 import json
@@ -47,31 +47,46 @@ class RangeBased(ColorPredictor):
         self.init_save_folder()
         self.load_latest_save_file()
         self.avg_rgb_values = np.array([])
+        self.std_deviance = np.zeros(shape=(len(self.colors), 3), dtype=float)  # variance for each channel
         self.update_rgb_averages()
 
     def update_rgb_averages(self):
-        self.avg_rgb_values = [np.mean(c_val, axis=0) if c_val else np.array([np.nan, np.nan, np.nan])
-                               for c_val in self.color_data]
+        self.avg_rgb_values = np.array([np.mean(c_val, axis=0) if c_val else np.array([np.nan, np.nan, np.nan])
+                               for c_val in self.color_data])
+        for idx in range(len(self.color_data)):   # we don't know how many samples are collected for each color, so we use for-loop
+            color_samples = self.color_data[idx]
+            if not color_samples:
+                self.std_deviance[idx] = np.array([0., 0., 0.]) # ToDo: Is this correct?
+            else:
+                cs = np.array(color_samples)
+                self.std_deviance[idx] = np.sqrt(
+                    np.sum(np.square(cs - self.avg_rgb_values[idx]), axis=0)
+                )
 
-    def mse(self, col):
-        mse = np.array(self.avg_rgb_values)
-        mse = mse - np.array(col)
+    def calculate_error(self, color_value) -> Optional[np.array]:
+        mse = self.avg_rgb_values - np.array(color_value)
         mse = np.square(mse)
         try:
-            error = np.sqrt(mse) / 255
-            return np.sum(error, axis=1)
+            mse = np.sqrt(mse)
+            error = np.sum(mse / self.std_deviance, axis=1)
+            return error
         except Exception as _e:
             print("np.sqrt() failed in color prediction")
-            return "None", -1.
+            return None
 
-    def predict_color(self, col, sensitivity=0.5) -> Tuple[int, float]:
-        error = self.mse(col)
+    def predict_color(self, col, sensitivity=1) -> Tuple[Optional[int], float]:
+        error = self.calculate_error(col)
+        print(error)
+        if np.isnan(col).all():
+            return "~COL", -1.
         if np.isnan(error).all():
-            return "0", -1.
+            return "MISS", -1.
         if (error[~np.isnan(error)] > sensitivity).all():
-            return "None", -1
+
+            return None, -1
         col_class = int(np.nanargmin(error))
-        return self.color_class_to_str(col_class), float(error[col_class])
+
+        return col_class, float(error[col_class])
 
     def color_class_to_str(self, col_class: int):
         if len(self.colors) - 1 < col_class:
