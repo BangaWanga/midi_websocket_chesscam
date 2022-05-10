@@ -108,7 +108,7 @@ class ChessCam:
                     case ControlKeys.ZoomSmaller:
                         scale -= 0.01
                     case ControlKeys.ScrollDisplayOptions:    # 9 on keyboard
-                        self.overlay.scroll_display_option()
+                        pass
                     case ControlKeys.TrainRed:    # R on keyboard
                         self.fitting_rgb_range = (True, False, False)
                     case ControlKeys.TrainGreen:    # G on keyboard

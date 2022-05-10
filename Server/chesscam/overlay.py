@@ -5,7 +5,7 @@ import cv2
 from typing import Tuple
 import random
 from enum import Enum
-from color_predictor import RangeBased
+from color_predictor import NearestNeighbour
 from typing import Optional
 
 
@@ -35,7 +35,7 @@ class Overlay:
         self.grid = {}
         self.update_grid(False)
         self.display_option = DisplayOption.Calibrate
-        self.color_predictor = RangeBased()  # ToDo: Remove
+        self.color_predictor = NearestNeighbour()  # ToDo: Remove
         #   self.range_based = TTest()
         self.cursor_field = (0, 0)
         self.cursor = np.array([0., 0.])
