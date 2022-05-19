@@ -62,25 +62,23 @@ class ChessCam:
         color_class = None
 
         for a in actions:
-            match a[0]:
-                case ControllerValueTypes.JogWheel:
-                    self.overlay.move_cursor(a[2].axis, a[2].value)
-                case ControllerValueTypes.KEY_UP:
-                    button_up = True
-                case ControllerValueTypes.KEY_DOWN:
-                    button_down = True
-            match a[1]:
-                case ControllerButtons.A_BTN:
-                    color_class = 0
-                case ControllerButtons.B_BTN:
-                    color_class = 1
-                case ControllerButtons.X_BTN:
-                    color_class = 2
-                case ControllerButtons.Y_BTN:
-                    color_class = 3
-                case ControllerButtons.BACK_BTN:
-                    if button_down:
-                        self.overlay.color_predictor.save_samples() # save to config file
+            if a[0] == ControllerValueTypes.JogWheel:
+                self.overlay.move_cursor(a[2].axis, a[2].value)
+            if a[0] == ControllerValueTypes.KEY_UP:
+                button_up = True
+            if a[0] == ControllerValueTypes.KEY_DOWN:
+                button_down = True
+            if a[1] == ControllerButtons.A_BTN:
+                color_class = 0
+            if a[1] == ControllerButtons.B_BTN:
+                color_class = 1
+            if a[1] == ControllerButtons.X_BTN:
+                color_class = 2
+            if a[1] == ControllerButtons.Y_BTN:
+                color_class = 3
+            if a[1] == ControllerButtons.BACK_BTN:
+                if button_down:
+                    self.overlay.color_predictor.save_samples() # save to config file
         if button_down and color_class is not None:
             self.overlay.select_field(color_class)
 
@@ -94,29 +92,28 @@ class ChessCam:
         if key != -1:
             if key in self.control_map:
                 action = self.control_map[key]
-                match action:
-                    case ControlKeys.MoveGridUp:
-                        offset = (offset[0] - move_size, offset[1])
-                    case ControlKeys.MoveGridDown:
-                        offset = (offset[0] + move_size, offset[1])
-                    case ControlKeys.MoveGridRight:
-                        offset = (offset[0], offset[1] - move_size)
-                    case ControlKeys.MoveGridLeft:
-                        offset = (offset[0], offset[1] + move_size)
-                    case ControlKeys.ZoomBigger:
-                        scale += 0.01
-                    case ControlKeys.ZoomSmaller:
-                        scale -= 0.01
-                    case ControlKeys.ScrollDisplayOptions:    # 9 on keyboard
-                        pass
-                    case ControlKeys.TrainRed:    # R on keyboard
-                        self.fitting_rgb_range = (True, False, False)
-                    case ControlKeys.TrainGreen:    # G on keyboard
-                        self.fitting_rgb_range = (False, True, False)
-                    case ControlKeys.TrainBlue:    # B on keyboard
-                        self.fitting_rgb_range = (False, False, True)
-                    case _:
-                        print("KEEY: ", key)
+                if action == ControlKeys.MoveGridUp:
+                    offset = (offset[0] - move_size, offset[1])
+                if action == ControlKeys.MoveGridDown:
+                    offset = (offset[0] + move_size, offset[1])
+                if action == ControlKeys.MoveGridRight:
+                    offset = (offset[0], offset[1] - move_size)
+                if action == ControlKeys.MoveGridLeft:
+                    offset = (offset[0], offset[1] + move_size)
+                if action == ControlKeys.ZoomBigger:
+                    scale += 0.01
+                if action == ControlKeys.ZoomSmaller:
+                    scale -= 0.01
+                if action == ControlKeys.ScrollDisplayOptions:    # 9 on keyboard
+                    pass
+                if action == ControlKeys.TrainRed:    # R on keyboard
+                    self.fitting_rgb_range = (True, False, False)
+                if action == ControlKeys.TrainGreen:    # G on keyboard
+                    self.fitting_rgb_range = (False, True, False)
+                if action == ControlKeys.TrainBlue:    # B on keyboard
+                    self.fitting_rgb_range = (False, False, True)
+                else:
+                    print("KEEY: ", key)
             self.overlay.change_drawing_options(offset, scale)
 
     def quit(self):

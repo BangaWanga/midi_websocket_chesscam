@@ -7,6 +7,7 @@ import random
 from enum import Enum
 from color_predictor import NearestNeighbour
 
+
 class DisplayOption(Enum):
     Normal = 0
     Calibrate = 1
