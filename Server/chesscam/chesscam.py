@@ -1,8 +1,10 @@
+enable_game_controller = False
 import cv2
 import camera
 import overlay_New
 from enum import Enum
-from game_controller import Game_Controller, ControllerValueTypes, ControllerButtons
+if enable_game_controller:
+    from game_controller import Game_Controller, ControllerValueTypes, ControllerButtons
 
 
 class ControlKeys(Enum):
@@ -39,7 +41,8 @@ class ChessCam:
         self.display_size = 800, 600
         self.training_rgb = (False, False, False)
         self.fitting_rgb_range = (False, False, False)
-        self.game_controller = Game_Controller()
+        if enable_game_controller:
+            self.game_controller = Game_Controller()
 
     def update(self):
         frame = self.camera.capture_frame_from_videostream()
@@ -53,7 +56,8 @@ class ChessCam:
 #            print("Trained")
         cv2.imshow('computer visions', frame)
         self.process_key_input()
-        self.process_controller_input()
+        if enable_game_controller:
+            self.process_controller_input()
 
     def process_controller_input(self):
         actions = self.game_controller.get_inputs()
