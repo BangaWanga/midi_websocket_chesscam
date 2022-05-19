@@ -72,7 +72,6 @@ class NearestNeighbour(ColorPredictor):
 
     def predict_color(self, col, sensitivity=1) -> Tuple[Optional[int], float]:
         error = self.calculate_error(col)
-        print(error)
         if np.isnan(col).all():
             return "~COL", -1.
         if np.isnan(error).all():
