@@ -100,7 +100,7 @@ class Overlay:
             right_lower_corner = int(left_upper_corner[0] + self.rect_width), int(
                 left_upper_corner[1] + self.rect_height)
             img = self.draw_rectangle(img, left_upper_corner, right_lower_corner, col=grid_color)
-            img = self.draw_classes(img, pos)
+            img = self.draw_classes(img)
         img = self.draw_cursor(img)
         self.update_cursor()
         return img

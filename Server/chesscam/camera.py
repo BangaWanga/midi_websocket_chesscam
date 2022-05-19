@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 
-
 class Camera:
     def __init__(self):
         self.cam = cv2.VideoCapture(0)

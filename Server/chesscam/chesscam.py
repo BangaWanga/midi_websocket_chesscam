@@ -1,6 +1,6 @@
 import cv2
-from Server.chesscam.camera import Camera
-from Server.chesscam.overlay_New import Overlay
+import camera
+import overlay_New
 from enum import Enum
 from game_controller import Game_Controller, ControllerValueTypes, ControllerButtons
 
@@ -20,8 +20,8 @@ class ControlKeys(Enum):
 
 class ChessCam:
     def __init__(self):
-        self.camera = Camera()
-        self.overlay = Overlay(self.camera.get_cam_resolution())    # handle scale and pos differently
+        self.camera = camera.Camera()
+        self.overlay = overlay_New.Overlay(self.camera.get_cam_resolution())    # handle scale and pos differently
         self.control_map = {
             97: ControlKeys.MoveGridUp,
             100: ControlKeys.MoveGridDown,
