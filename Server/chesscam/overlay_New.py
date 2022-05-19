@@ -120,8 +120,7 @@ class Overlay:
         return img
 
     def update_color_values(self, colors, error_threshold: float = 0.3):    # ToDo: Make this all pure numpy
-        for i in self.grid_positions:
-            position = self.grid_positions[i]
+        for i, position in enumerate(self.grid_positions):
             color_class, error = self.color_predictor.predict_color(colors[i])
             if error == -1 or error > error_threshold:
                 self.np_grid[position[0]][position[1]] = self.np_grid[position[0]][position[1]] - 1
