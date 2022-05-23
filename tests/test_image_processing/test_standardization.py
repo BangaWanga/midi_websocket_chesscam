@@ -3,7 +3,7 @@ from unittest import TestCase
 from pathlib import Path
 import numpy as np
 import cv2
-from Server.chesscam.image_processing import standardize_position
+from chesscam import standardize_position
 
 
 class TestImageStandardization(TestCase):

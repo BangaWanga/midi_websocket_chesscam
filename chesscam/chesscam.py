@@ -1,7 +1,7 @@
 import cv2
 
-from Server.chesscam.camera import Camera
-from Server.chesscam.overlay import Overlay
+from chesscam.camera import Camera
+from chesscam.overlay import Overlay
 
 
 class ChessCam:
