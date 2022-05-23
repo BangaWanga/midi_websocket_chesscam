@@ -20,6 +20,7 @@ class ControlKeys(Enum):
     TrainBlue = 9
 
 
+
 class ChessCam:
     def __init__(self):
         self.camera = camera.Camera()

@@ -1,0 +1,39 @@
+Coordinate calculation cheat sheet
+==================================
+
+The board geometry in processed image coordinates can be calculated
+knowing the board template geometry and the position marker corner coordinates
+
+Positions and sizes in the board template:
+
+Black border of top markers
+Position	x	y	w	h
+Left		1	90	7	7
+Right		90	90	7	7
+
+--> dx_left2left_edge = 89
+--> dx_left2right_edge = 89 + 7 = 96
+pos_marker_w = dx_left2right_edge / 96 * 7
+
+Top left field
+x	y	w	h
+9	79	10	10
+
+--> field_width = dx_left2right_edge / 96 * 10
+
+Page
+w	h
+98	98
+
+Field x = Left pos. marker corner x (1) + delta = 9 --> Delta = 8 = field_width / 10 * 8
+--> Field x = topleft_corner_x + field_width / 10 * 8
+
+In template, (0, 0) is the bottom left corner:
+Pos. marker bottom - field bottom = 90 - 79 = 11
+field bottom = pos_marker_bottom - 11
+field top = pos_marker_bottom - 11 + field_width
+field top = pos_marker_top - pos_marker_w - 11 + field_width
+field top dist to top = dx_left2right_edge / 96 * 98 - field top (= 98 - (79 + 10) = 9 in template units)
+
+Now convert to cv2 coordinates:
+field_top_y = pos_marker_corner_y + pos_marker_w + dx_left2right_edge / 96 * 11 - field_width
