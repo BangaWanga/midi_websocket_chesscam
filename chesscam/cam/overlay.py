@@ -13,10 +13,6 @@ class DisplayOption(Enum):
     Calibrate = 1
 
 
-# 1. Get picture
-# Different procedures: Check colors each n-steps
-
-
 class Overlay:
     def __init__(self, frame_shape, width: int = 8, height: int = 8, offset: Tuple[int, int] = (0, 0),
                  scale: float = 1.):
