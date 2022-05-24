@@ -1,0 +1,1 @@
+from .chesscam import ChessCam
