@@ -26,10 +26,8 @@ class ChessCam:
         elif message["event"] == "get_board_colors":
             print("Get Board Colors")
 
-    def update(self, message=None, show=True):
+    def update(self, message=None):
         frame = self.camera.capture_frame_from_videostream()
-        if show:
-            cv2.imshow("Name", frame)
         frame_std, _, _ = standardize_position(frame, self.resolution, self.padding, debug='')
 
         if frame_std is None:
