@@ -83,6 +83,7 @@ class Overlay:
                 x_from = self.offset[0] + i * self.field_width
                 x_to = self.offset[0] + (i + 1) * self.field_width
                 rgb_values[(j*self.width) + i] = color_mean(frame[x_from:x_to,y_from:y_to,])
+        print(rgb_values.reshape((8, 8, 3)))
         return rgb_values
 
     def get_square_color(self, img, position: Tuple[int, int]):  # ToDo: np.array cast needed?
