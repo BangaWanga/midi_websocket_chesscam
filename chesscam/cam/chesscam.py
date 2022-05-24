@@ -9,7 +9,7 @@ class ChessCam:
         self.camera = camera.Camera()
         self.resolution = self.camera.get_cam_resolution()
         self.padding = 5
-        self.board_params = get_board_parameters((500, 500), self.padding)
+        self.board_params = image_processing.get_board_parameters((500, 500), self.padding)
         offset, field_width, field_height = self.board_params
         self.overlay = overlay.Overlay(self.resolution, offset, field_width, field_height)    # handle scale and pos differently
 
