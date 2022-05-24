@@ -1,7 +1,4 @@
-import typing
-from multiprocessing import Process
-from cam import Chesscam
-from multiprocessing import Process, Pipe, Lock, Array, Queue
+from cam import ChessCam
 import asyncio
 import websockets
 import json
@@ -9,7 +6,7 @@ import json
 # {"event": "calibrate", "fields": [[0, 0, 1], [1, 1, 2]]}
 # {"event": "get_board_colors"}
 
-cam = Chesscam()
+cam = ChessCam()
 
 
 def calibrate(req: dict):

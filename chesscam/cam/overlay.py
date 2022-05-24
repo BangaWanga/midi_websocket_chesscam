@@ -3,7 +3,7 @@ import itertools
 from typing import Tuple
 import typing
 from enum import Enum
-from chesscam.cam.color_predictor import NearestNeighbour
+from cam.color_predictor import NearestNeighbour
 
 
 class DisplayOption(Enum):
