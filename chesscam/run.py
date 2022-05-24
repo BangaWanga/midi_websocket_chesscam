@@ -3,7 +3,7 @@ import asyncio
 import websockets
 import json
 
-# {"event": "calibrate", "fields": [[0, 0, 1], [1, 1, 2]]}
+# {"event": "calibrate", "fields": [[7, 7, 2]]}
 # {"event": "get_board_colors"}
 
 cam = ChessCam()

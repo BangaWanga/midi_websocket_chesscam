@@ -86,10 +86,9 @@ class Overlay:
         return rgb_values
 
     def get_square_color(self, img, position: Tuple[int, int]):  # ToDo: np.array cast needed?
-        x_from = np.array((self.frame_width * position[0] / self.width) + self.offset[0]) * self.scale
-        x_to = np.array(((self.frame_width * (position[0] + 1)) / self.width) + self.offset[0]) * self.scale
-        y_from = np.array(((self.frame_height * position[1]) / self.height) + self.offset[1]) * self.scale
-        y_to = np.array(((self.frame_width * (position[1] + 1)) / self.height) + self.offset[1]) * self.scale
-        y_from, y_to, x_from, x_to = y_from.astype(int), y_to.astype(int), x_from.astype(int), x_to.astype(int)
+        y_from = self.offset[1] + position[1] * self.field_height
+        y_to = self.offset[1] + (position[1] + 1) * self.field_height
+        x_from = self.offset[0] + position[0] * self.field_width
+        x_to = self.offset[0] + (position[0] + 1) * self.field_width
         aoi = img[y_from:y_to, x_from:x_to]  # area of interest
         return np.mean(aoi, axis=1).mean(axis=0)

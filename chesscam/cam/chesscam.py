@@ -17,15 +17,6 @@ class ChessCam:
     def chess_board_values(self) -> dict:
         return self.overlay.chess_board_values
 
-    def receive_msg(self, message, frame):
-        if message["event"] == "calibrate":
-            print("Calibrate ", message)
-            positions = [(f[0], f[1]) for f in message["fields"]]
-            selected_colors = [f[2] for f in message["fields"]]
-            self.overlay.calibrate(frame, positions, selected_colors)
-        elif message["event"] == "get_board_colors":
-            print("Get Board Colors")
-
     def update(self, message=None):
         frame = self.camera.capture_frame_from_videostream()
         frame_std, _, _ = standardize_position(frame, self.resolution, self.padding, debug='')
