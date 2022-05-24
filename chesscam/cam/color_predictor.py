@@ -48,7 +48,8 @@ class NearestNeighbour(ColorPredictor):
 
     def update_rgb_averages(self):
         self.avg_rgb_values = np.array([np.mean(c_val, axis=0) if c_val else np.array([np.nan, np.nan, np.nan])
-                               for c_val in self.color_data])
+                                        for c_val in self.color_data])
+        print(self.avg_rgb_values)
         for idx in range(len(self.color_data)):   # we don't know how many samples are collected for each color, so we use for-loop
             color_samples = self.color_data[idx]
             if not color_samples:

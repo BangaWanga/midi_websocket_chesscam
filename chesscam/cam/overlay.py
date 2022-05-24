@@ -12,7 +12,7 @@ class DisplayOption(Enum):
 
 
 class Overlay:
-    def __init__(self, frame_shape, field_width: int, field_height: int, offset: Tuple[int, int] = (0, 0), scale: float = 1.):
+    def __init__(self, frame_shape, offset: Tuple[int, int], field_width: int, field_height: int, scale: float = 1.):
         self.colors = ("None", "green", "red", "blue", "yellow")
         self.width = 8
         self.height = 8
@@ -29,7 +29,6 @@ class Overlay:
         # flattened grid_positions [(0,0), (0, 1), ...]
         self.grid_positions = list(itertools.chain(*[[(i, j) for j in range(self.width)] for i in range(self.height)]))
         self.grid_positions = np.array(self.grid_positions)
-
         self._grid = np.zeros(shape=(self.width, self.height, len(self.colors)), dtype=int)
         self.color_buffer = 5  # how many concurrent frames a color can be guessed
         self.field_height = field_height
@@ -54,8 +53,6 @@ class Overlay:
         # rgb_values = self.color_scan(frame)
         measured_colors = [self.get_square_color(frame, p) for p in positions]
         self.color_predictor.add_samples(selected_colors, measured_colors)
-        # self.calibrate_field = False  # ToDo: Maybe add more samples right away?
-        # self.color_predictor.add_sample(self.selected_color, color)
 
     def update_color_values(self, frame, error_threshold: float = 1.3):  # ToDo: Make this all pure numpy
         colors = self.color_scan(frame)
@@ -80,12 +77,12 @@ class Overlay:
         rgb_values = np.zeros(shape=(64, 3))
         color_mean = lambda x: np.mean(x, axis=(0, 1))  # map area of pixels to single rgb-value
         for j in range(self.height):
-            y_from = self.offset[1] + j*self.field_height
+            y_from = self.offset[1] + j * self.field_height
             y_to = self.offset[1] + (j + 1) * self.field_height
             for i in range(self.width):
                 x_from = self.offset[0] + i * self.field_width
                 x_to = self.offset[0] + (i + 1) * self.field_width
-                rgb_values[(j*self.width) + i] = color_mean(frame[y_from:y_to, x_from:x_to])
+                rgb_values[(j*self.width) + i] = color_mean(frame[x_from:x_to,y_from:y_to,])
         return rgb_values
 
     def get_square_color(self, img, position: Tuple[int, int]):  # ToDo: np.array cast needed?
