@@ -12,11 +12,10 @@ class DisplayOption(Enum):
 
 
 class Overlay:
-    def __init__(self, frame_shape, width: int = 8, height: int = 8, offset: Tuple[int, int] = (0, 0),
-                 scale: float = 1.):
+    def __init__(self, frame_shape, field_width: int, field_height: int, offset: Tuple[int, int] = (0, 0), scale: float = 1.):
         self.colors = ("None", "green", "red", "blue", "yellow")
-        self.width = width
-        self.height = height
+        self.width = 8
+        self.height = 8
         self.frame_height, self.frame_width = frame_shape
         self.offset = offset
         self.scale = scale
@@ -33,19 +32,13 @@ class Overlay:
 
         self._grid = np.zeros(shape=(self.width, self.height, len(self.colors)), dtype=int)
         self.color_buffer = 5  # how many concurrent frames a color can be guessed
+        self.field_height = field_height
+        self.field_width = field_width
 
     @property
     def chess_board_values(self) -> dict:
         col_classes = np.argmax(self._grid, axis=2).flatten()
         return {int(pos): int(col_classes[pos]) for pos in np.argwhere(col_classes != 0)}
-
-    @property
-    def rect_width(self):
-        return int((self.frame_width * self.scale) / self.width)
-
-    @property
-    def rect_height(self):
-        return int((self.frame_height * self.scale) / self.height)
 
     def select_field(self, color_class: int):
         self.selected_color = color_class
@@ -55,7 +48,7 @@ class Overlay:
         return int((self.frame_width / self.width) * position[0]), int((self.frame_height / self.height) * position[1])
 
     def center_point_from_grid_position(self, position) -> Tuple[int, int]:
-        return int((position[0] + .5) * self.rect_width), int((position[1] + .5) * self.rect_height)
+        return int((position[0] + .5) * self.field_width), int((position[1] + .5) * self.field_height)
 
     def calibrate(self, frame, positions: typing.List[tuple], selected_colors: typing.List[int]):
         # rgb_values = self.color_scan(frame)
@@ -84,21 +77,15 @@ class Overlay:
         return int(np.argmax(self._grid[position[0]][position[1]]))
 
     def color_scan(self, frame: np.ndarray):
-        x_from = np.array((self.frame_width * self.grid_positions[..., 0] / self.width) + self.offset[0]) * self.scale
-        x_to = np.array(
-            ((self.frame_width * (self.grid_positions[..., 0] + 1)) / self.width) + self.offset[0]) * self.scale
-        y_from = np.array(
-            ((self.frame_height * self.grid_positions[..., 1]) / self.height) + self.offset[1]) * self.scale
-        y_to = np.array(
-            ((self.frame_height * (self.grid_positions[..., 1] + 1)) / self.height) + self.offset[1]) * self.scale
-        y_from, y_to, x_from, x_to = y_from.astype(int), y_to.astype(int), x_from.astype(int), x_to.astype(int)
         rgb_values = np.zeros(shape=(64, 3))
-
-        reduce_color = lambda x: np.mean(x, axis=(0, 1))  # map area of pixels to single rgb-value
-        rgb_values[...] = np.stack([
-            reduce_color(frame[y_from[i]:y_to[i], x_from[i]:x_to[i]])
-            for i in range(64)
-        ])
+        color_mean = lambda x: np.mean(x, axis=(0, 1))  # map area of pixels to single rgb-value
+        for j in range(self.height):
+            y_from = self.offset[1] + j*self.field_height
+            y_to = self.offset[1] + (j + 1) * self.field_height
+            for i in range(self.width):
+                x_from = self.offset[0] + i * self.field_width
+                x_to = self.offset[0] + (i + 1) * self.field_width
+                rgb_values[(j*self.width) + i] = color_mean(frame[y_from:y_to, x_from:x_to])
         return rgb_values
 
     def get_square_color(self, img, position: Tuple[int, int]):  # ToDo: np.array cast needed?
