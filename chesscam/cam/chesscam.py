@@ -1,7 +1,12 @@
 import cv2
-from cam.camera import Camera
-from cam.overlay import Overlay
-from cam.image_processing import get_board_parameters, standardize_position
+try:
+    from cam.camera import Camera
+    from cam.overlay import Overlay
+    from cam.image_processing import get_board_parameters, standardize_position
+except ModuleNotFoundError:
+    from chesscam.cam.camera import Camera
+    from chesscam.cam.overlay import Overlay
+    from chesscam.cam.image_processing import get_board_parameters, standardize_position
 
 
 class ChessCam:
