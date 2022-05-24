@@ -1,14 +1,14 @@
 import cv2
-
-from chesscam.camera import Camera
-from chesscam.overlay import Overlay
+from chesscam.cam.camera import Camera
+from chesscam.cam.overlay import Overlay
 
 
 class ChessCam:
-    def __init__(self):
+    def __init__(self, connection):
         self.camera = Camera()
         self.overlay = Overlay(self.camera.get_cam_resolution())    # handle scale and pos differently
         print("Chesscam init finished")
+        self.connection = connection
 
     def update(self):
         frame = self.camera.capture_frame_from_videostream()
@@ -40,12 +40,23 @@ class ChessCam:
                 print(key)
         self.overlay.change_drawing_options(offset, scale)
 
-
     def quit(self):
         # When everything done, release the capture
         self.camera.cam.release()
         cv2.destroyAllWindows()
         quit()
+
+    def _send_current_chesspositions(self):
+        if self.connection is None:
+            return
+        self.connection.send(self.overlay.grid)
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.connection is None:
+            self.connection.close()
 
 
 if __name__ == "__main__":
