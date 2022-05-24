@@ -1,22 +1,17 @@
 import cv2
-try:
-    from cam.camera import Camera
-    from cam.overlay import Overlay
-    from cam.image_processing import get_board_parameters, standardize_position
-except ModuleNotFoundError:
-    from chesscam.cam.camera import Camera
-    from chesscam.cam.overlay import Overlay
-    from chesscam.cam.image_processing import get_board_parameters, standardize_position
+from cam import camera
+from cam import overlay
+from cam import image_processing
 
 
 class ChessCam:
     def __init__(self):
-        self.camera = Camera()
+        self.camera = camera.Camera()
         self.resolution = self.camera.get_cam_resolution()
         self.padding = 5
         self.board_params = get_board_parameters((500, 500), self.padding)
         offset, field_width, field_height = self.board_params
-        self.overlay = Overlay(self.resolution, offset, field_width, field_height)    # handle scale and pos differently
+        self.overlay = overlay.Overlay(self.resolution, offset, field_width, field_height)    # handle scale and pos differently
 
     @property
     def chess_board_values(self) -> dict:
@@ -24,7 +19,7 @@ class ChessCam:
 
     def update(self, message=None):
         frame = self.camera.capture_frame_from_videostream()
-        frame_std, _, _ = standardize_position(frame, self.resolution, self.padding, debug='')
+        frame_std, _, _ = image_processing.standardize_position(frame, self.resolution, self.padding, debug='')
 
         if frame_std is None:
             print("No field detected")
@@ -45,7 +40,7 @@ class ChessCam:
 
     def debug_field(self):
         frame = self.camera.capture_frame_from_videostream()
-        frame_std, _, _ = standardize_position(frame, self.resolution, self.padding, debug='')
+        frame_std, _, _ = image_processing.standardize_position(frame, self.resolution, self.padding, debug='')
         self.overlay.update_color_values(frame_std)
         frame_std = self.overlay.draw_rect(frame_std.copy())
         cv2.imshow("Name", frame_std)
