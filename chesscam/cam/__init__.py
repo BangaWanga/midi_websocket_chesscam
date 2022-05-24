@@ -1,5 +1,5 @@
-import chesscam.cam.chesscam
+from chesscam.cam.chesscam import ChessCam
 
+# Chesscam = chesscam.cam.chesscam.ChessCam
 
-Chesscam = chesscam.cam.chesscam.ChessCam
-conn = chesscam.cam.chesscam
+Chesscam = ChessCam

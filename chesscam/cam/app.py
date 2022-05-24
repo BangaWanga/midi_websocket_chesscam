@@ -1,10 +1,8 @@
 import asyncio
 import typing
-
 import websockets
 import json
 from concurrent.futures import ProcessPoolExecutor
-
 
 
 def callibrate(fields: typing.List[typing.Tuple[int, int]]):
@@ -14,8 +12,9 @@ def callibrate(fields: typing.List[typing.Tuple[int, int]]):
 def get_board_colors():
     pass
 
+
 endpoints = {
-    "callibrate": callibrate,
+    "calibrate": callibrate,
     "get_board_colors": get_board_colors
 }
 
@@ -36,7 +35,7 @@ async def handler(websocket):
             if response is not None:
                 websocket.send(json.dumps(response))
             else:
-                print("Callibrated")
+                print("Calibrated")
 
 
 async def main():

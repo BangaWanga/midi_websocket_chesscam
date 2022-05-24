@@ -4,6 +4,7 @@ import json
 
 calibration_map = dict()
 
+
 async def main():
 
     async with websockets.connect('ws://127.0.0.1:4000/sequencersocket/websocket') as websocket:
@@ -50,4 +51,3 @@ except KeyboardInterrupt:
 finally:
     print("Closing Loop")
     loop.close()
-

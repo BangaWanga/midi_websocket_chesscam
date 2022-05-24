@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 import datetime
 import os
 import json
@@ -71,13 +71,13 @@ class NearestNeighbour(ColorPredictor):
             return None
 
     def predict_color(self, col, sensitivity=1) -> Tuple[Optional[int], float]:
+        # ToDo: bigger numpy array
         error = self.calculate_error(col)
         if np.isnan(col).all():
             return "~COL", -1.
         if np.isnan(error).all():
             return "MISS", -1.
         if (error[~np.isnan(error)] > sensitivity).all():
-
             return None, -1
         col_class = int(np.nanargmin(error))
 
@@ -88,11 +88,12 @@ class NearestNeighbour(ColorPredictor):
             raise ValueError("Color Class is not available")
         return self.colors[col_class]
 
-    def add_sample(self, color_class: int, rgb_value: Tuple[int, int, int]):
-        if color_class >= len(self.colors):
-            raise ValueError("Color Class not found")
-        self.color_data[color_class].append(list(rgb_value))
-        # print(f"Sample added for {self.colors[color_class]}")
+    def add_samples(self, color_classes: List[int], rgb_values: List[Tuple[int, int, int]]):
+        for i in range(len(color_classes)):
+            color_class = color_classes[i]
+            rgb_value = rgb_values[i]
+            self.color_data[color_class].append(list(rgb_value))
+        self.save_samples()
 
     def init_save_folder(self):
         if not os.path.exists(self.save_file_path):
@@ -104,7 +105,7 @@ class NearestNeighbour(ColorPredictor):
         config_dict = {col: self.color_data[self.colors.index(col)] for col in self.colors}
         with open(filepath, 'w') as outfile:
             outfile.write(json.dumps(config_dict))
-        print("Safed samples to ", filepath)
+        print("Saved samples to ", filepath)
 
     def load_save_file(self, filepath):
         print(f"Loading latest safe file {filepath} ")

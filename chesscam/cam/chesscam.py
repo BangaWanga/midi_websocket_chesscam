@@ -1,20 +1,50 @@
+import typing
+
 import cv2
 from chesscam.cam.camera import Camera
 from chesscam.cam.overlay import Overlay
+import multiprocessing
 
 
 class ChessCam:
-    def __init__(self, connection):
+    def __init__(self):
         self.camera = Camera()
         self.overlay = Overlay(self.camera.get_cam_resolution())    # handle scale and pos differently
         print("Chesscam init finished")
-        self.connection = connection
+        self.chess_data = None
+        self.callibrate_fields = None
+        self._get_queue: typing.Optional[multiprocessing.Queue] = None
+        self._put_queue: typing.Optional[multiprocessing.Queue] = None
 
-    def update(self):
+    def __call__(self, *args, **kwargs):
+        self._get_queue = args[0]
+        self._put_queue = args[1]
+        while True:
+            self.update()
+            #self._send_current_chesspositions()
+
+    def receive_msg(self, frame):
+        if self._get_queue.empty():
+            return
+        ret = self._get_queue.get(block=False)
+        if ret is None:
+            return
+        if ret["event"] == "calibrate":
+            positions = [(f[0], f[1]) for f in ret["fields"]]
+            selected_colors = [f[2] for f in ret]
+            self.overlay.calibrate(frame, positions, selected_colors)
+        elif ret["event"] == "get_board_colors":
+            print("Get Board Colors")
+            self._send_current_chesspositions()
+
+    def update(self, show=False):
         frame = self.camera.capture_frame_from_videostream()
-        img = self.overlay.draw_grid(frame)
-        cv2.imshow('computer visions', img)
+        self.overlay.update_color_values(frame)
+        #self.calibrate(frame)
+        if show:
+            cv2.imshow('computer visions', frame)
         self.process_key_input()
+        self.receive_msg(frame)
 
     def process_key_input(self):
         key = cv2.waitKey(1)
@@ -37,7 +67,7 @@ class ChessCam:
             case 45:
                 scale -= 0.01
             case -1:
-                print(key)
+                pass
         self.overlay.change_drawing_options(offset, scale)
 
     def quit(self):
@@ -47,16 +77,15 @@ class ChessCam:
         quit()
 
     def _send_current_chesspositions(self):
-        if self.connection is None:
-            return
-        self.connection.send(self.overlay.grid)
+        print("Send put queue ", self.overlay.chess_board_values)
+        self._put_queue.put(self.overlay.chess_board_values)
+        # self.chess_data = multiprocessing.Array("i", self.overlay.chess_board_values.tolist())
 
     def __enter__(self):
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.connection is None:
-            self.connection.close()
+        pass
 
 
 if __name__ == "__main__":

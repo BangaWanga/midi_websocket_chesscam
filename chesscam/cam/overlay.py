@@ -1,11 +1,10 @@
 import numpy as np
-import math
 import itertools
 import cv2
 from typing import Tuple
-import random
+import typing
 from enum import Enum
-from color_predictor import NearestNeighbour
+from chesscam.cam.color_predictor import NearestNeighbour
 
 
 class DisplayOption(Enum):
@@ -16,13 +15,12 @@ class DisplayOption(Enum):
 class Overlay:
     def __init__(self, frame_shape, width: int = 8, height: int = 8, offset: Tuple[int, int] = (0, 0),
                  scale: float = 1.):
-        self.colors = ("green", "red", "blue", "yellow")
+        self.colors = ("None", "green", "red", "blue", "yellow")
         self.width = width
         self.height = height
         self.frame_height, self.frame_width = frame_shape
         self.offset = offset
         self.scale = scale
-        self.grid = {}
         self.display_option = DisplayOption.Calibrate
         self.color_predictor = NearestNeighbour(colors=self.colors)
         self.cursor_field = (0, 0)  # ToDo: Less variables for cursor
@@ -34,8 +32,13 @@ class Overlay:
         self.grid_positions = list(itertools.chain(*[[(i, j) for j in range(self.width)] for i in range(self.height)]))
         self.grid_positions = np.array(self.grid_positions)
 
-        self.np_grid = np.zeros(shape=(self.width, self.height, len(self.colors)), dtype=int)
+        self._grid = np.zeros(shape=(self.width, self.height, len(self.colors)), dtype=int)
         self.color_buffer = 5  # how many concurrent frames a color can be guessed
+
+    @property
+    def chess_board_values(self) -> dict:
+        col_classes = np.argmax(self._grid, axis=2).flatten()
+        return {int(pos): int(col_classes[pos]) for pos in np.argwhere(col_classes != 0)}
 
     @property
     def rect_width(self):
@@ -100,37 +103,32 @@ class Overlay:
     def center_point_from_grid_position(self, position) -> Tuple[int, int]:
         return int((position[0] + .5) * self.rect_width), int((position[1] + .5) * self.rect_height)
 
-    def calibrate(self, img, position: tuple, _field_info: dict):
-        if self.selected_color is None or not self.calibrate_field:
-            return img
-        color = self.get_square_color(img, position)
-        if position == self.cursor_field:
-            print("Adding sample ", color, " for field ", position, " and color ", self.selected_color,
-                  self.color_predictor.colors[self.selected_color])
-            self.color_predictor.add_sample(self.selected_color, color)
-            self.calibrate_field = False  # ToDo: Maybe add more samples right away?
-            # self.color_predictor.add_sample(self.selected_color, color)
-        return img
+    def calibrate(self, frame, positions: typing.List[tuple], selected_colors: typing.List[int]):
+        # rgb_values = self.color_scan(frame)
+        measured_colors = [self.get_square_color(frame, p) for p in positions]
+        self.color_predictor.add_samples(selected_colors, measured_colors)
+        # self.calibrate_field = False  # ToDo: Maybe add more samples right away?
+        # self.color_predictor.add_sample(self.selected_color, color)
 
-    def update_color_values(self, frame, error_threshold: float = 0.3):  # ToDo: Make this all pure numpy
+    def update_color_values(self, frame, error_threshold: float = 1.3):  # ToDo: Make this all pure numpy
         colors = self.color_scan(frame)
-
         for i, position in enumerate(self.grid_positions):
             color_class, error = self.color_predictor.predict_color(colors[i])
             if error == -1 or error > error_threshold:
-                self.np_grid[position[0]][position[1]] = self.np_grid[position[0]][position[1]] - 1
+                self._grid[position[0]][position[1]] = self._grid[position[0]][position[1]] - 1
             else:
                 diff = np.array([-1 for _ in self.colors])
                 diff[color_class] = 1
-                self.np_grid[position[0]][position[1]] += diff
-            self.np_grid[position[0]][position[1]] = np.clip(self.np_grid[position[0]][position[1]], 0,
-                                                             self.color_buffer)
+                self._grid[position[0]][position[1]] += diff
+            self._grid[position[0]][position[1]] = np.clip(self._grid[position[0]][position[1]], 0,
+                                                           self.color_buffer)
+
 
     def get_current_color_class(self, position: Tuple[int, int]):
         min_count = max(1, int(self.color_buffer / 2))  # how many times a color has to be counted before it is valid
-        if (self.np_grid[position[0]][position[1]] < min_count).all():
+        if (self._grid[position[0]][position[1]] < min_count).all():
             return None
-        return int(np.argmax(self.np_grid[position[0]][position[1]]))
+        return int(np.argmax(self._grid[position[0]][position[1]]))
 
     def color_scan(self, frame: np.ndarray):
         x_from = np.array((self.frame_width * self.grid_positions[..., 0] / self.width) + self.offset[0]) * self.scale
@@ -163,8 +161,8 @@ class Overlay:
             # error2color = cv2.cvtColor(np.array(error * 255).astype(np.uint8), cv2.COLOR_GRAY2RGB).reshape(3)
             # error2color = tuple(np.array(error2color) / 255)
             color_str = "NONE"
-            if not (self.np_grid[position[0]][position[1]] == 0).all():
-                color_class = int(np.argmax(self.np_grid[position[0]][position[1]]))
+            if not (self._grid[position[0]][position[1]] == 0).all():
+                color_class = int(np.argmax(self._grid[position[0]][position[1]]))
                 color_str = self.colors[color_class]
 
             frame = self.write_text(frame, f"{color_str}", start_pos=center_point, font_color=text_color)
