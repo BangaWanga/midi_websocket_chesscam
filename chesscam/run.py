@@ -6,36 +6,21 @@ import asyncio
 import websockets
 import json
 
-{"event": "calibrate", "fields": [[0, 0, 1], [1, 1, 2]]}
-{"event": "get_board_colors"}
-msg_q = Queue() # ToDo: Put fields for calibrate to queue directly
-q2 = Queue() # ToDo: Put fields for calibrate to queue directly
+# {"event": "calibrate", "fields": [[0, 0, 1], [1, 1, 2]]}
+# {"event": "get_board_colors"}
 
-
-def _runner(*args):
-    _queue_get, _queue_put = args
-    cam = Chesscam()
-    cam(_queue_get, _queue_put)
-
-# ToDo: Endpoints all send data via msg_q, do it in one function
+cam = Chesscam()
 
 
 def calibrate(req: dict):
-    global msg_q
-    fields = req.get("fields")
-    if fields is not None:
-        msg_q.put(req)
+    global cam
+    cam.update(req)
 
 
-def get_board_colors(_req: dict):
-    global msg_q
-    msg_q.put(_req)
-    try:
-        chess_data = q2.get(block=True, timeout=1)
-        return {"board_colors": chess_data}
-    except Exception as e:
-        print(e)
-        return {"board_colors": "Empty"}
+def get_board_colors(req: dict):
+    global cam
+    cam.update(req)
+    return {"board_colors": cam.chess_board_values}
 
 
 endpoints = {
@@ -69,6 +54,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    p0 = Process(target=_runner, args=(msg_q, q2))
-    p0.start()
     asyncio.run(main())
