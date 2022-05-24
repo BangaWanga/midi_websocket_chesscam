@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 import itertools
 from typing import Tuple
@@ -82,9 +83,18 @@ class Overlay:
             for i in range(self.width):
                 x_from = self.offset[0] + i * self.field_width
                 x_to = self.offset[0] + (i + 1) * self.field_width
-                rgb_values[(j*self.width) + i] = color_mean(frame[x_from:x_to,y_from:y_to,])
+                rgb_values[(j*self.width) + i] = color_mean(frame[x_from:x_to, y_from:y_to])
         print(rgb_values[0].astype(int))
         return rgb_values
+
+    def draw_rect(self, frame, position: Tuple[int, int] = (0, 0)):
+        i = position[0]
+        j = position[1]
+        y_from = self.offset[1] + j * self.field_height
+        y_to = self.offset[1] + (j + 1) * self.field_height
+        x_from = self.offset[0] + i * self.field_width
+        x_to = self.offset[0] + (i + 1) * self.field_width
+        return cv2.rectangle(frame, (x_from, y_from), (x_to, y_to), 2)
 
     def get_square_color(self, img, position: Tuple[int, int]):  # ToDo: np.array cast needed?
         y_from = self.offset[1] + position[1] * self.field_height

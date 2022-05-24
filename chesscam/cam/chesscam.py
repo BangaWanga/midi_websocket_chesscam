@@ -38,8 +38,15 @@ class ChessCam:
         cv2.destroyAllWindows()
         quit()
 
+    def debug_field(self):
+        frame = self.camera.capture_frame_from_videostream()
+        frame_std, _, _ = standardize_position(frame, self.resolution, self.padding, debug='')
+        self.overlay.update_color_values(frame_std)
+        frame_std = self.overlay.draw_rect(frame_std.copy())
+        cv2.imshow("Name", frame_std)
+
 
 if __name__== "__main__":
-    c= ChessCam()
+    c = ChessCam()
     while True:
-        c.update(show=True)
+        c.debug_field()
