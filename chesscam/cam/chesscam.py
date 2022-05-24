@@ -19,7 +19,7 @@ class ChessCam:
 
     def update(self, message=None):
         frame = self.camera.capture_frame_from_videostream()
-        frame_std, _, _ = image_processing.standardize_position(frame, self.resolution, self.padding, debug='')
+        frame_std, _, _ = image_processing.standardize_position(frame, (500, 500), self.padding, debug='')
 
         if frame_std is None:
             print("No field detected")
@@ -40,13 +40,17 @@ class ChessCam:
 
     def debug_field(self):
         frame = self.camera.capture_frame_from_videostream()
-        frame_std, _, _ = image_processing.standardize_position(frame, self.resolution, self.padding, debug='')
-        self.overlay.update_color_values(frame_std)
-        frame_std = self.overlay.draw_rect(frame_std.copy())
-        cv2.imshow("Name", frame_std)
+        frame_std, _, _ = image_processing.standardize_position(frame, (500, 500), self.padding, debug='')
+        if frame_std is not None:
+            frame_std = self.overlay.draw_rect(frame_std.copy())
+            return frame_std
 
 
 if __name__== "__main__":
     c = ChessCam()
     while True:
-        c.debug_field()
+        ret = c.debug_field()
+        if cv2.waitKey(1) == ord("q"):
+            break
+        if ret is not None:
+            cv2.imshow("Name", ret)
