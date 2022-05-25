@@ -17,9 +17,17 @@ class ChessCam:
     def chess_board_values(self) -> dict:
         return self.overlay.chess_board_values
 
-    def update(self, message=None):
+    def get_frame(self, debug=False):
         frame = self.camera.capture_frame_from_videostream()
         frame_std, _, _ = image_processing.standardize_position(frame, (500, 500), self.padding, debug='')
+
+        if frame_std is None and debug:
+            return frame
+
+        return frame_std
+
+    def update(self, message=None):
+        frame_std = self.get_frame()
 
         if frame_std is None:
             print("No field detected")
@@ -39,8 +47,8 @@ class ChessCam:
         quit()
 
     def debug_field(self):
-        frame = self.camera.capture_frame_from_videostream()
-        frame_std, _, _ = image_processing.standardize_position(frame, (500, 500), self.padding, debug='')
+        frame_std = self.get_frame()
+
         if frame_std is not None:
             frame_std = self.overlay.draw_rect(frame_std.copy())
             return frame_std
