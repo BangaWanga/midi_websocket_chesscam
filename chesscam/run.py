@@ -2,9 +2,18 @@ from cam import ChessCam
 import asyncio
 import websockets
 import json
+import sys
+import cv2
 
 # {"event": "calibrate", "fields": [[7, 7, 2]]}
 # {"event": "get_board_colors"}
+
+# check if the command-line argument `debug` was passed to the script
+# to activate debug mode
+if len(sys.argv) > 1 and sys.argv[1] == 'debug':
+    debug = True
+else:
+    debug = False
 
 cam = ChessCam()
 
@@ -45,7 +54,22 @@ async def handler(websocket):
                 print("Calibrated")
 
 
+async def debug_loop():
+    while True:
+        if cv2.waitKey(1) == ord("q"):
+            break
+
+        frame = cam.get_frame(debug=True)
+        cv2.imshow('Debug View', frame)
+
+    cv2.destroyWindow('Debug View')
+
+
 async def main():
+    if debug:
+        debug_task = asyncio.create_task(debug_loop())
+        await debug_task
+
     async with websockets.serve(handler, "", 8765):
         await asyncio.Future()  # run forever
 
