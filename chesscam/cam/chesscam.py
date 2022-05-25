@@ -47,11 +47,10 @@ class ChessCam:
         quit()
 
     def debug_field(self):
-        frame_std = self.get_frame()
+        frame_std = self.get_frame(debug=True)
 
-        if frame_std is not None:
-            frame_std = self.overlay.draw_rect(frame_std.copy())
-            return frame_std
+        frame_std = self.overlay.draw_rect(frame_std.copy())
+        return frame_std
 
 
 if __name__== "__main__":

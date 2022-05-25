@@ -59,7 +59,7 @@ async def debug_loop():
         if cv2.waitKey(1) == ord("q"):
             break
 
-        frame = cam.get_frame(debug=True)
+        frame = cam.debug_field()
         cv2.imshow('Debug View', frame)
 
     cv2.destroyWindow('Debug View')
