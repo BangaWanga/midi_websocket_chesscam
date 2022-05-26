@@ -50,7 +50,8 @@ class chess_game:
     def get_sequencer_line(self, sequences_str):
         sequences = []
         for i in range(0, 4):
-            new_sequence = sequences_str[i].split(" ") + sequences_str[i + 4].split(" ")
+            new_sequence = sequences_str[i*2].split(" ") + sequences_str[i*2 + 1].split(" ")
+            new_sequence = list(map(int, new_sequence))
             sequences.append(new_sequence)
         return sequences
 
@@ -58,6 +59,7 @@ class chess_game:
 if __name__ == "__main__":
     c = chess_game()
     seq =c.play_all()
+
 
     for s in seq:
         print(s)

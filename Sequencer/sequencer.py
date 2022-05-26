@@ -3,9 +3,10 @@ from time import sleep
 import rtmidi
 
 import config
+from Sequencer.util.chess_game import chess_game
 from sequence import Sequence
 
-empty_sequence = [1,0,1,0,2,0,1,0,0,0,0,0,0,0,0,0]
+empty_sequence = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
 NOTE_ON = 144
 NOTE_OFF = 144 - 16
@@ -13,15 +14,18 @@ NOTE_OFF = 144 - 16
 class sequencer:
     def __init__(self, sequence_count = 4):
         self.init_midi()
-        self.sequence = []
-        for s in range(0,sequence_count):
-            self.sequence.append(Sequence(empty_sequence))
+        self.sequence_count = sequence_count
+        self.clear_sequencer()
         self.bpm = 120
         self.running = False
         self.midi_clock_index = 1
         self.velocity = 127
         self.midi_off_msgs = []
 
+    def clear_sequencer(self):
+        self.sequence = []
+        for s in range(0, self.sequence_count):
+            self.sequence.append(Sequence(empty_sequence))
 
     def init_midi(self):
         self.midiout = rtmidi.MidiOut()
@@ -55,47 +59,42 @@ class sequencer:
 
     def handle_input(self, event, data=None):
         message, deltatime = event
-        print(message)
+        # tirck
         if message == [248]:
             self.midi_clock_index += 1
             if self.midi_clock_index == 6:
                 self.midi_clock_index = 0
                 self.process_output()
+        # start and contiunue
         if message == [250] or message ==[251]:
             self.midi_clock_index += 1
             self.process_output()
+        # stop
         if message == [252]:
             self.midi_clock_index = 0
-            for seq in self.sequence:
-                seq.reet()
-
+            self.clear_sequencer()
 
     def getMSFor16inBpm(self):
         return self.bpm / 60 / 16
 
     def process_output(self):
         messages = []
-        for seq in self.sequence:
+        for sequence_nr, seq in enumerate(self.sequence):
             msg = seq.run()
             if msg:
                 messages.append(msg)
+                self.midiout.send_message(self.get_midi_for_valu(msg, sequence_nr))
 
-        # clean duplication
-        messages = list(dict.fromkeys(messages))
 
-        self.send_midi_off(messages)
-
-        for msg in messages:
-            print(msg)
-            self.midiout.send_message(self.get_midi_for_valu(msg))
-
-    def get_midi_for_valu(self, val, midi_cmd = NOTE_ON):
-        if val in config.midi_value:
-            return [midi_cmd, config.midi_value[val], self.velocity]
+    def get_midi_for_valu(self, val, sequence_nr = 0, midi_cmd = NOTE_ON):
+        print(midi_cmd + sequence_nr)
+        if val in config.midi_value[sequence_nr]:
+            midi_val = config.midi_value[sequence_nr][val]
+            return [midi_cmd + sequence_nr, midi_val , self.velocity]
         else:
             return None
 
-    def set_sequence(self,sequence, nr):
+    def set_sequence(self,nr, sequence):
         self.sequence[nr] = sequence
 
     def send_midi_off(self, messages):
@@ -106,5 +105,15 @@ class sequencer:
 
 
 if __name__ == "__main__":
-    s = sequencer(2)
+    s = sequencer(4)
+
+    c = chess_game("util/Fischer.pgn")
+    seq = c.play_all()
+
+    sequenc_number = 40
+    s.set_sequence(0, Sequence(seq[sequenc_number][0]))
+    s.set_sequence(1, Sequence(seq[sequenc_number][1]))
+    s.set_sequence(2, Sequence(seq[sequenc_number][2]))
+    s.set_sequence(3, Sequence(seq[sequenc_number][3]))
+
     s.run()
