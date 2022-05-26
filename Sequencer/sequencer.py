@@ -5,7 +5,7 @@ import rtmidi
 import config
 from sequence import Sequence
 
-empty_sequence = [0,0,1,0,0,0,0,0,1,2,0,0,0,3,0,0]
+empty_sequence = [1,0,1,0,2,0,1,0,0,0,0,0,0,0,0,0]
 
 NOTE_ON = 144
 NOTE_OFF = 144 - 16
@@ -55,11 +55,20 @@ class sequencer:
 
     def handle_input(self, event, data=None):
         message, deltatime = event
+        print(message)
         if message == [248]:
             self.midi_clock_index += 1
-            if self.midi_clock_index == 24:
-                self.process_output()
+            if self.midi_clock_index == 6:
                 self.midi_clock_index = 0
+                self.process_output()
+        if message == [250] or message ==[251]:
+            self.midi_clock_index += 1
+            self.process_output()
+        if message == [252]:
+            self.midi_clock_index = 0
+            for seq in self.sequence:
+                seq.reet()
+
 
     def getMSFor16inBpm(self):
         return self.bpm / 60 / 16

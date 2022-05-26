@@ -11,6 +11,9 @@ class Sequence:
         self.incr_act_step()
         return midi_note
 
+    def reet(self):
+        self.act_step = 0
+
 
     def incr_act_step(self):
         self.act_step += 1
