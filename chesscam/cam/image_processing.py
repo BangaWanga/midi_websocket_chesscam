@@ -341,9 +341,89 @@ def transform_quadrilateral(frame: np.ndarray, source_coords: np.ndarray, target
     return proc_frame
 
 
+def get_darkest_color(frame):
+    flat_frame = frame.reshape((-1, 3))
+
+    luminosities = np.mean(frame, axis=-1)
+    darkest_idx = np.argmin(luminosities)
+
+    return flat_frame[darkest_idx]
+
+
+def get_brightest_color(frame):
+    flat_frame = frame.reshape((-1, 3))
+
+    luminosities = np.mean(frame, axis=-1)
+    brightest_idx = np.argmax(luminosities)
+
+    return flat_frame[brightest_idx]
+
+
+def balance_colors(standardized_frame, origin, field_width, field_height):
+    """Black-white balance a frame, using the positioning marker colors
+
+    Attempts to use the colors of the position markers to balance the image
+
+    Args:
+        standardized_frame:
+        origin:
+        field_width:
+        field_height:
+
+    Returns:
+        The color-balanced frame
+    """
+    right_x = origin[0] + 8 * field_width
+    bottom_y = origin[1] + 8 * field_height
+
+    # get black and white reference colors by combining data from all four positioning markers
+    # i.e.: black is the median of the darkest color from each corner, white the median of the brightest
+    blacks = []
+    whites = []
+
+    topleft_area = standardized_frame[:origin[0], :origin[1]]
+    blacks.append(get_darkest_color(topleft_area))
+    whites.append(get_brightest_color(topleft_area))
+
+    topright_area = standardized_frame[right_x:, :origin[1]]
+    blacks.append(get_darkest_color(topright_area))
+    whites.append(get_brightest_color(topright_area))
+
+    bottomright_area = standardized_frame[right_x:, bottom_y:]
+    blacks.append(get_darkest_color(bottomright_area))
+    whites.append(get_brightest_color(bottomright_area))
+
+    bottomleft_area = standardized_frame[:origin[0], bottom_y:]
+    blacks.append(get_darkest_color(bottomleft_area))
+    whites.append(get_brightest_color(bottomleft_area))
+
+    blacks = np.array(blacks)
+    black_color = np.median(blacks, axis=0)
+
+    whites = np.array(whites)
+    white_color = np.median(whites, axis=0)
+
+    # Alternative: global reference points of all four corners
+    # aoi = np.concatenate((topleft_area, topright_area, bottomright_area, bottomleft_area))
+    # lum = np.mean(aoi, axis=-1)
+
+    # black_idx = np.argmin(lum)
+    # white_idx = np.argmax(lum)
+
+    # black_color = aoi[black_idx]
+    # white_color = aoi[white_idx]
+
+    # normalize the image to the black and white reference measurements
+    out_frame = 255 * (standardized_frame.astype(float) - black_color) / (white_color - black_color)
+    out_frame = np.clip(out_frame, 0, 255)
+    out_frame = out_frame.astype('uint8')
+
+    return out_frame
+
+
 if __name__ == '__main__':
     """ The following code is meant for debugging purposes """
-    test_mode = 'from_stream'  # 'from_stream' or 'from_file'
+    test_mode = 'from_file'  # 'from_stream' or 'from_file'
 
     if test_mode == 'from_file':
         input_img = cv2.imread('tests/test_image_processing/resources/fotos/valid_dark_corner.jpg')
@@ -360,6 +440,9 @@ if __name__ == '__main__':
             width_vec = np.array([field_w, 0])
             height_vec = np.array([0, field_h])
 
+            stand_img = balance_colors(stand_img, origin, field_w, field_h)
+            # stand_img[:10, :10] = np.array([0, 0, 0])
+
             for x_ind in range(8):
                 for y_ind in range(8):
                     field_origin = origin + x_ind * width_vec + y_ind * height_vec
@@ -367,6 +450,7 @@ if __name__ == '__main__':
                                               field_origin,
                                               field_origin + np.array([field_w, field_h]),
                                               (0, 0, 255), 2)
+
 
             cv2.imshow('Processed image', stand_img)
 
@@ -394,6 +478,8 @@ if __name__ == '__main__':
             # proc_frame, _, _ = standardize_position(frame, debug='histogram')
 
             if proc_frame is not None:
+                origin, field_w, field_h = get_board_parameters((500, 500), 5)
+                proc_frame = balance_colors(proc_frame, origin, field_w, field_h)
                 cv2.imshow('Processed', proc_frame)
             else:
                 cv2.imshow('Processed', frame)
