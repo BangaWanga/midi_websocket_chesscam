@@ -1,4 +1,4 @@
-import config
+
 
 class Sequence:
     def __init__(self, seq_array):
@@ -13,7 +13,6 @@ class Sequence:
 
     def reet(self):
         self.act_step = 0
-
 
     def incr_act_step(self):
         self.act_step += 1

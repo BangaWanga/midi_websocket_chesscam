@@ -1,5 +1,4 @@
 from time import sleep
-
 import rtmidi
 
 import config
@@ -9,6 +8,7 @@ empty_sequence = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
 NOTE_ON = 144
 NOTE_OFF = 144 - 16
+
 
 class sequencer:
     def __init__(self, sequence_count = 4):
@@ -51,12 +51,15 @@ class sequencer:
             self.process_output()
             sleep(self.getMSFor16inBpm())
 
-        self.midiin.set_callback(self.handle_input)
+        self.midiin.set_callback(self.handle_midi_input)
 
         while True:
             pass
 
-    def handle_input(self, event, data=None):
+    def handle_network_input(self, json_message: dict):
+        # if json_message["event"] ==
+        pass
+    def handle_midi_input(self, event, data=None):
         message, deltatime = event
         # tirck
         if message == [248]:
