@@ -173,7 +173,10 @@ async def handle_debug_connection(
                 await send_shout_to_debug_interface(websocket, msg)
             elif json_response["event"] == "toggle_true_colors":
                 TRUE_COLOR_MODE = not TRUE_COLOR_MODE
-                await updated_seqquencer_pad(websocket, payload)
+                if TRUE_COLOR_MODE:
+                    await send_color_classes_to_debug_interface(websocket)
+                else:
+                    await updated_seqquencer_pad(websocket, payload)
             elif json_response["event"] == "clear":
                 # await send_color_classes_to_debug_interface(websocket)
                 payload = json_response["payload"]
