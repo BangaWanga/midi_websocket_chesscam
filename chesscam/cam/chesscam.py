@@ -66,7 +66,7 @@ class ChessCam:
         else:
             return "Could not write file (or other error)"
 
-    def get_board_colors(self) -> typing.Optional[dict[int, int]]:
+    def get_board_colors(self):# -> typing.Optional[dict[int, int]]:
         frame_std = self.get_frame()
         if frame_std is None:
             return None
