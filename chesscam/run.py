@@ -7,7 +7,7 @@ import cv2
 import logging
 import sys
 from queue import Queue
-
+import typing
 
 debug_queue = Queue()
 
@@ -30,13 +30,19 @@ def calibrate(positions, color_classes) -> str:
     return cam.calibrate(positions, color_classes)
 
 
-def get_board_colors():
+def get_board_colors() -> typing.Dict[int, int]:
     return {"board_colors": cam.chess_board_values}
 
 
 def broadcast_chessboard_values():
     if connected_clients:
-        websockets.broadcast(connected_clients, get_board_colors())
+        chess_board_color_classes = get_board_colors()
+        json_response = {
+            "event": "board_colors",
+            "topic": "sequencer:foyer",
+            "payload": chess_board_color_classes,
+            "ref": ""}
+        websockets.broadcast(connected_clients, json_response)
     else:
         # send_shout_to_debug_interface() put into
         debug_queue.put("No clients connected")

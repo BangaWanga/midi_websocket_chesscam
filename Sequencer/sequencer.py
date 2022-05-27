@@ -1,13 +1,22 @@
 from time import sleep
 import rtmidi
-
+import math
 import config
 from sequence import Sequence
-
+import websockets
+import json
 empty_sequence = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
 NOTE_ON = 144
 NOTE_OFF = 144 - 16
+
+
+def connect_to_chesscam(websocket):
+    websocket.send(json.dumps({
+                "event": "subscribe",
+                "topic": "sequencer:foyer",
+                "payload": "",
+                "ref": ""}))
 
 
 class sequencer:
@@ -44,10 +53,9 @@ class sequencer:
                              timing=False,
                              active_sense=True)
 
-    def run(self):
+    async def run(self):
         self.running = True
-
-        while (self.running and not config.use_midi_clock):
+        while self.running and not config.use_midi_clock:
             self.process_output()
             sleep(self.getMSFor16inBpm())
 
@@ -56,9 +64,27 @@ class sequencer:
         while True:
             pass
 
+    async def handle_network_connection(self, chesscam_adress: str = 'ws://sequencerinterface.local:4000/sequencersocket/websocket'):
+
+        async with websockets.connect(chesscam_adress) as websocket:
+            await connect_to_chesscam(websocket)
+            print("Connection with debugger established")
+            while True:
+                response = await websocket.recv()
+                self.handle_network_input(response)
+
     def handle_network_input(self, json_message: dict):
-        # if json_message["event"] ==
-        pass
+        if json_message["event"] == "subscription_success":
+            print("subscription_success, Yeah!")
+        elif json_message["event"] == "board_colors":
+            sequences = [empty_sequence for _ in range(4)]
+            for col_class, field_id in json_message["payload"].items():
+                sequences[math.floor(field_id / 16)][field_id % 16] =  col_class
+            for idx, s in enumerate(sequences):
+                self.set_sequence(idx, s)
+        else:
+            print("Unknown event")
+
     def handle_midi_input(self, event, data=None):
         message, deltatime = event
         # tirck
