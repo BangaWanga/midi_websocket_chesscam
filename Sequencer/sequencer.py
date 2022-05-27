@@ -68,6 +68,9 @@ class sequencer:
         while True:
             pass
 
+    # ssid = "Licht"
+    # pwd = "end1_5$&(#+--)"
+
     async def subscribe(self, chesscam_adress: str = 'ws://sequencerinterface.local:4000/sequencersocket/websocket'):
         global connection
         if connection is None:

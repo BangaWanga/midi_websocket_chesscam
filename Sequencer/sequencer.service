@@ -8,8 +8,8 @@ Type=simple
 Restart=always
 RestartSec=1
 User=pi
-WorkingDirectory=/home/pi/Code/midi_websocket_chesscam/Sequencer
-ExecStart=/home/pi/Code/midi_websocket_chesscam/venv/bin/python /home/pi/Code/midi_websocket_chesscam/Sequencer/main.py
+WorkingDirectory=/home/pi/chesscam_production/chesscam/Sequencer
+ExecStart=/home/pi/chesscam_production/venv/bin/python /home/pi/chesscam_production/chesscam/Sequencer/main.py
 
 [Install]
 WantedBy=multi-user.target
