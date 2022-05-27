@@ -134,23 +134,26 @@ class NearestNeighbour(ColorPredictor):
 
 
 class RadiusNearestNeighbors(ColorPredictor):
-    def __init__(self, colors=("green", "red", "blue", "yellow")):
+    def __init__(self, colors=("green", "red", "blue", "yellow"), radius=20., outlier_class_idx=0):
         super().__init__(colors)
 
         self.model = None
+        self.outlier_label = outlier_class_idx
+        self.radius = radius
         self.init_save_folder()
         self.load_latest_save_file()
 
-    def calibrate(self, radius=20.):
+    def calibrate(self):
         # assemble calibration data
         X, y = [], []
         for color_index in range(len(self.colors)):
             X += self.color_data[color_index]
             y += [color_index] * len(self.color_data[color_index])
 
-        # create and fit a new model
-        self.model = RadiusNearestNeighbors(radius)
-        self.model.fit(X, y)
+        if len(y) > 0:
+            # create and fit a new model
+            self.model = RadiusNeighborsClassifier(self.radius, outlier_label=self.outlier_label)
+            self.model.fit(X, y)
 
     def predict_color(self, col) -> Tuple[Optional[int], Optional[float]]:
         if self.model is None:
