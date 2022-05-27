@@ -3,10 +3,9 @@ from time import sleep
 import rtmidi
 
 import config
-from Sequencer.util.chess_game import chess_game
 from sequence import Sequence
 
-empty_sequence = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+empty_sequence = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
 NOTE_ON = 144
 NOTE_OFF = 144 - 16
@@ -82,12 +81,15 @@ class sequencer:
         for sequence_nr, seq in enumerate(self.sequence):
             msg = seq.run()
             if msg:
-                messages.append(msg)
+                messages.append([sequence_nr,msg])
                 self.midiout.send_message(self.get_midi_for_valu(msg, sequence_nr))
+
+        for msg in self.midi_off_msgs:
+            self.midiout.send_message(self.get_midi_for_valu(msg[1], msg[0], NOTE_OFF))
+        self.midi_off_msgs = messages
 
 
     def get_midi_for_valu(self, val, sequence_nr = 0, midi_cmd = NOTE_ON):
-        print(midi_cmd + sequence_nr)
         if val in config.midi_value[sequence_nr]:
             midi_val = config.midi_value[sequence_nr][val]
             return [midi_cmd + sequence_nr, midi_val , self.velocity]
@@ -106,14 +108,5 @@ class sequencer:
 
 if __name__ == "__main__":
     s = sequencer(4)
-
-    c = chess_game("util/Fischer.pgn")
-    seq = c.play_all()
-
-    sequenc_number = 40
-    s.set_sequence(0, Sequence(seq[sequenc_number][0]))
-    s.set_sequence(1, Sequence(seq[sequenc_number][1]))
-    s.set_sequence(2, Sequence(seq[sequenc_number][2]))
-    s.set_sequence(3, Sequence(seq[sequenc_number][3]))
 
     s.run()
