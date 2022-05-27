@@ -86,7 +86,7 @@ class ColorPredictor:
 
 class NearestNeighbour(ColorPredictor):
 
-  def __init__(self, colors=("green", "red", "blue", "yellow")):
+    def __init__(self, colors=("green", "red", "blue", "yellow")):
         super().__init__(colors)
         self.init_save_folder()
         # self.load_latest_save_file()
