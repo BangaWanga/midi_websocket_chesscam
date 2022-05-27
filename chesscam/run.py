@@ -224,7 +224,7 @@ async def handle_debug_events(websocket):
 
 
 async def handle_debug_connection(
-        debugger_address: str = 'ws://sequencerinterface.local:4000/sequencersocket/websocket'
+        debugger_address: str = 'ws://192.168.8.122:4000/sequencersocket/websocket'
 ):
     try:
         async with websockets.connect(debugger_address) as websocket:
