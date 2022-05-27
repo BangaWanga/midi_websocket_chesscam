@@ -5,10 +5,14 @@ import config
 from sequence import Sequence
 import websockets
 import json
+import asyncio
+
 empty_sequence = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
 NOTE_ON = 144
 NOTE_OFF = 144 - 16
+
+connection = None
 
 
 def connect_to_chesscam(websocket):
@@ -64,14 +68,19 @@ class sequencer:
         while True:
             pass
 
-    async def handle_network_connection(self, chesscam_adress: str = 'ws://sequencerinterface.local:4000/sequencersocket/websocket'):
+    async def subscribe(self, chesscam_adress: str = 'ws://sequencerinterface.local:4000/sequencersocket/websocket'):
+        global connection
+        if connection is None:
+            connection = websockets.connect(chesscam_adress)
+            await connect_to_chesscam(connection)
 
-        async with websockets.connect(chesscam_adress) as websocket:
-            await connect_to_chesscam(websocket)
-            print("Connection with debugger established")
-            while True:
-                response = await websocket.recv()
-                self.handle_network_input(response)
+    async def handle_network_connection(self):
+        global connection
+        try:
+            response = connection.messages.get_nowait()
+            self.handle_network_input(response)
+        except asyncio.queues.QueueEmpty:
+            pass
 
     def handle_network_input(self, json_message: dict):
         if json_message["event"] == "subscription_success":
@@ -86,6 +95,12 @@ class sequencer:
             print("Unknown event")
 
     def handle_midi_input(self, event, data=None):
+        if not connection:
+            print("No Connection")
+        else:
+            message = await connection.recv()
+            self.handle_network_input(json.loads(message))
+
         message, deltatime = event
         # tirck
         if message == [248]:
