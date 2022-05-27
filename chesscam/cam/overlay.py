@@ -15,15 +15,9 @@ class Overlay:
         self.height = 8
         self.frame_height, self.frame_width = frame_shape
         self.offset = offset
-        self.display_option = DisplayOption.Calibrate
         # self.color_predictor = NearestNeighbour(colors=self.colors)
         self.color_predictor = RadiusNearestNeighbors(colors=self.colors, outlier_class_idx=0)
         self.color_predictor.calibrate()
-        self.cursor_field = (0, 0)  # ToDo: Less variables for cursor
-        self.cursor = np.array([0., 0.])
-        self.cursor_absolute = (0., 0.)
-        self.selected_color = None
-        self.calibrate_field = False  # If this value is tuple[int, int], the selected field is calibrated with selected color
 
         # flattened grid_positions [(0,0), (0, 1), ...]
         self.grid_positions = list(itertools.chain(*[[(i, j) for j in range(self.width)] for i in range(self.height)]))
