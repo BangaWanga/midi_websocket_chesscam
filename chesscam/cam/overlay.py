@@ -4,7 +4,7 @@ import itertools
 from typing import Tuple
 import typing
 from enum import Enum
-from cam.color_predictor import NearestNeighbour
+from cam.color_predictor import NearestNeighbour, RadiusNearestNeighbors
 
 
 class DisplayOption(Enum):
@@ -21,7 +21,8 @@ class Overlay:
         self.offset = offset
         self.scale = scale
         self.display_option = DisplayOption.Calibrate
-        self.color_predictor = NearestNeighbour(colors=self.colors)
+        # self.color_predictor = NearestNeighbour(colors=self.colors)
+        self.color_predictor = RadiusNearestNeighbors(colors=self.colors)
         self.cursor_field = (0, 0)  # ToDo: Less variables for cursor
         self.cursor = np.array([0., 0.])
         self.cursor_absolute = (0., 0.)
@@ -54,6 +55,7 @@ class Overlay:
         # rgb_values = self.color_scan(frame)
         measured_colors = [self.get_square_color(frame, p) for p in positions]
         self.color_predictor.add_samples(selected_colors, measured_colors)
+        self.color_predictor.calibrate()
 
     def update_color_values(self, frame, error_threshold: float = 1.3):  # ToDo: Make this all pure numpy
         colors = self.color_scan(frame)
