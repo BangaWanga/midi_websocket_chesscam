@@ -15,7 +15,6 @@ class Overlay:
         self.height = 8
         self.frame_height, self.frame_width = frame_shape
         self.offset = offset
-        self.scale = scale
         self.display_option = DisplayOption.Calibrate
         # self.color_predictor = NearestNeighbour(colors=self.colors)
         self.color_predictor = RadiusNearestNeighbors(colors=self.colors, outlier_class_idx=0)
