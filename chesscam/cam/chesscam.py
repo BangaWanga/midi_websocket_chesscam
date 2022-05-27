@@ -1,3 +1,4 @@
+import typing
 import cv2
 from cam import camera
 from cam import overlay
@@ -14,8 +15,8 @@ class ChessCam:
         self.overlay = overlay.Overlay(self.resolution, offset, field_width, field_height)    # handle scale and pos differently
 
     @property
-    def chess_board_values(self) -> dict:
-        return self.overlay.chess_board_values
+    def chess_board_values(self) -> typing.Dict[int, int]:
+        return self.get_board_colors()
 
     def get_frame(self, debug=False):
         frame = self.camera.capture_frame_from_videostream()
@@ -31,6 +32,46 @@ class ChessCam:
             return frame
 
         return frame_std
+
+    def get_color_of_field(self, field: typing.Tuple[int, int]) -> typing.Optional[typing.Tuple[int, int, int]]:
+        frame_std = self.get_frame()
+        if frame_std is None:
+            return None
+        #   self.overlay.update_color_values(frame_std)
+        return self.overlay.get_square_color(frame_std, field)
+
+    def get_color_of_all_fields(self): # -> typing.Optional[typing.List[typing.Dict[typing.Tuple[int, int]], typing.Tuple[int, int, int]]]:
+        frame_std = self.get_frame()
+        if frame_std is None:
+            return None
+        colors = {tuple(pos): self.overlay.get_square_color(frame_std, pos) for pos in self.overlay.grid_positions}
+        return colors
+
+    def save_color_samples(self) -> bool:
+        return self.overlay.color_predictor.save_samples()
+
+    def load_color_samples(self) -> bool:
+        return self.overlay.color_predictor.load_latest_save_file()
+
+    def calibrate(self, positions, selected_colors, n_frames=50) -> str:
+        succ = True
+        for _f in range(n_frames):
+            frame_std = self.get_frame()
+            if frame_std is None:
+                return "No frame detected"
+            succ = succ and self.overlay.calibrate(frame_std, positions, selected_colors)
+        # succ = succ and self.save_color_samples()
+        if succ:
+            return "Calibration worked!"
+        else:
+            return "Could not write file (or other error)"
+
+    def get_board_colors(self) -> typing.Optional[dict[int, int]]:
+        frame_std = self.get_frame()
+        if frame_std is None:
+            return None
+        self.overlay.update_color_values(frame_std)
+        return self.overlay.chess_board_values
 
     def update(self, message=None):
         frame_std = self.get_frame()

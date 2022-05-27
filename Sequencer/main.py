@@ -1,9 +1,12 @@
 from sequencer import sequencer
-from util.chess_game import chess_game
+import asyncio
+import threading
 
-if __name__ == "__main__":
+
+def main():
     s = sequencer(4)
     s.run()
 
-    c = chess_game()
-    print(c.make_next_move())
+
+if __name__ == "__main__":
+    main()
