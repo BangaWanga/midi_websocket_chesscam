@@ -19,7 +19,13 @@ class ChessCam:
 
     def get_frame(self, debug=False):
         frame = self.camera.capture_frame_from_videostream()
+
+        target_img_wh = (500, 500)
         frame_std, _, _ = image_processing.standardize_position(frame, (500, 500), self.padding, debug='')
+
+        if frame_std is not None:
+            origin, field_w, field_h = get_board_parameters(target_img_wh, self.padding)
+            frame_std = image_processing.balance_colors(frame_std, origin, field_w, field_h)
 
         if frame_std is None and debug:
             return frame
