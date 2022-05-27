@@ -4,9 +4,15 @@ import datetime
 import os
 import json
 from pathlib import Path
+from sklearn.neighbors import RadiusNeighborsClassifier
 
 
 class ColorPredictor:
+    def __init__(self, colors):
+        self.save_file_path = None
+        self.colors = colors
+        self.color_data = [[] for _ in self.colors]
+        self.save_file_path = "CalibrationData"
 
     @staticmethod
     def get_complementary_color(col_rgb: tuple):
@@ -34,12 +40,54 @@ class ColorPredictor:
             b, c = c, b
         return a + c
 
+    def init_save_folder(self):
+        if not os.path.exists(self.save_file_path):
+            os.mkdir(self.save_file_path)
+
+    def save_samples(self):
+        filepath = Path(self.save_file_path).joinpath(
+            f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json")
+        config_dict = {col: self.color_data[self.colors.index(col)] for col in self.colors}
+        with open(filepath, 'w') as outfile:
+            outfile.write(json.dumps(config_dict))
+        print("Saved samples to ", filepath)
+
+    def load_save_file(self, filepath):
+        print(f"Loading latest safe file {filepath} ")
+        with open(filepath, 'r') as infile:
+            config_dict = json.loads(infile.read())
+        for k, v in config_dict.items():
+            if k in self.colors:
+                self.color_data[self.colors.index(k)] = v
+                print(f"{k}: {len(v)} samples")
+
+    def load_latest_save_file(self):  # -1 is always the lastest index
+        save_files = os.listdir(self.save_file_path)
+        save_files.sort()
+        if save_files:
+            filepath = Path(self.save_file_path).joinpath(save_files[-1])
+            self.load_save_file(filepath)
+
+    def add_samples(self, color_classes: List[int], rgb_values: List[Tuple[int, int, int]]):
+        for i in range(len(color_classes)):
+            color_class = color_classes[i]
+            rgb_value = rgb_values[i]
+            self.color_data[color_class].append(list(rgb_value))
+        self.save_samples()
+
+    def color_class_to_str(self, col_class: int):
+        if len(self.colors) - 1 < col_class:
+            raise ValueError("Color Class is not available")
+        return self.colors[col_class]
+
+    def calibrate(self):
+        pass
+
 
 class NearestNeighbour(ColorPredictor):
-    def __init__(self, colors=("null", "green", "red", "blue", "yellow")):
-        self.colors = colors
-        self.color_data = [[] for _ in self.colors]
-        self.save_file_path = "CalibrationData"
+
+  def __init__(self, colors=("green", "red", "blue", "yellow")):
+        super().__init__(colors)
         self.init_save_folder()
         # self.load_latest_save_file()
         self.avg_rgb_values = np.array([])
@@ -85,54 +133,38 @@ class NearestNeighbour(ColorPredictor):
 
         return col_class, float(error[col_class])
 
-    def color_class_to_str(self, col_class: int):
-        if len(self.colors) - 1 < col_class:
-            raise ValueError("Color Class is not available")
-        return self.colors[col_class]
 
-    def add_samples(self, color_classes: List[int], rgb_values: List[Tuple[int, int, int]], write: bool = False) -> bool:
-        for i in range(len(color_classes)):
-            color_class = color_classes[i]
-            rgb_value = rgb_values[i]
-            self.color_data[color_class].append(list(rgb_value))
-        if write:
-            return self.save_samples()
-        else:
-            return True
+class RadiusNearestNeighbors(ColorPredictor):
+    def __init__(self, colors=("green", "red", "blue", "yellow"), radius=20., outlier_class_idx=0):
+        super().__init__(colors)
 
-    def init_save_folder(self):
-        if not os.path.exists(self.save_file_path):
-            os.mkdir(self.save_file_path)
 
-    def save_samples(self) -> bool:
-        filepath = Path(self.save_file_path).joinpath(
-            f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json")
-        config_dict = {col: self.color_data[self.colors.index(col)] for col in self.colors}
-        try:
-            with open(filepath, 'w') as outfile:
-                outfile.write(json.dumps(config_dict))
-                return True
-        except:
-            return False
+        self.model = None
+        self.outlier_label = outlier_class_idx
+        self.radius = radius
+        self.init_save_folder()
+        self.load_latest_save_file()
 
-    def load_save_file(self, filepath):
-        print(f"Loading latest safe file {filepath} ")
-        with open(filepath, 'r') as infile:
-            config_dict = json.loads(infile.read())
-        for k, v in config_dict.items():
-            if k in self.colors:
-                self.color_data[self.colors.index(k)] = v
-                print(f"{k}: {len(v)} samples")
-        return True
+    def calibrate(self):
+        # assemble calibration data
+        X, y = [], []
+        for color_index in range(len(self.colors)):
+            X += self.color_data[color_index]
+            y += [color_index] * len(self.color_data[color_index])
 
-    def load_latest_save_file(self):  # -1 is always the lastest index
-        save_files = os.listdir(self.save_file_path)
-        save_files.sort()
-        if save_files:
-            filepath = Path(self.save_file_path).joinpath(save_files[-1])
-            try:
-                return self.load_save_file(filepath)
-            except:
-                return False
-        else:
-            return False
+        if len(y) > 0:
+            # create and fit a new model
+            self.model = RadiusNeighborsClassifier(self.radius, outlier_label=self.outlier_label)
+            self.model.fit(X, y)
+
+    def predict_color(self, col) -> Tuple[Optional[int], Optional[float]]:
+        if self.model is None:
+            return None, None
+
+        pred_class_idx = self.model.predict([col]).squeeze()[0]
+
+        pred_probs = self.model.predict_probe([col]).squeeze()
+        pred_prob = pred_probs[pred_class]
+
+        return pred_class_idx, pred_prob
+

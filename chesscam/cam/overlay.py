@@ -3,7 +3,9 @@ import numpy as np
 import itertools
 from typing import Tuple
 import typing
-from cam.color_predictor import NearestNeighbour
+from enum import Enum
+from cam.color_predictor import NearestNeighbour, RadiusNearestNeighbors
+
 
 
 class Overlay:
@@ -13,7 +15,17 @@ class Overlay:
         self.height = 8
         self.frame_height, self.frame_width = frame_shape
         self.offset = offset
-        self.color_predictor = NearestNeighbour(colors=self.colors)
+        self.scale = scale
+        self.display_option = DisplayOption.Calibrate
+        # self.color_predictor = NearestNeighbour(colors=self.colors)
+        self.color_predictor = RadiusNearestNeighbors(colors=self.colors, outlier_class_idx=0)
+        self.color_predictor.calibrate()
+        self.cursor_field = (0, 0)  # ToDo: Less variables for cursor
+        self.cursor = np.array([0., 0.])
+        self.cursor_absolute = (0., 0.)
+        self.selected_color = None
+        self.calibrate_field = False  # If this value is tuple[int, int], the selected field is calibrated with selected color
+
         # flattened grid_positions [(0,0), (0, 1), ...]
         self.grid_positions = list(itertools.chain(*[[(i, j) for j in range(self.width)] for i in range(self.height)]))
         self.grid_positions = np.array(self.grid_positions)
@@ -35,7 +47,9 @@ class Overlay:
 
     def calibrate(self, frame, positions: typing.List[tuple], selected_colors: typing.List[int]) -> bool:
         measured_colors = [self.get_square_color(frame, p) for p in positions]
-        return self.color_predictor.add_samples(selected_colors, measured_colors)
+        self.color_predictor.add_samples(selected_colors, measured_colors)
+        self.color_predictor.calibrate()
+        return True
 
     def update_color_values(self, frame, error_threshold: float = 1.3):  # ToDo: Make this all pure numpy
         colors = self.color_scan(frame)
