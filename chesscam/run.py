@@ -6,7 +6,10 @@ from cam import ChessCam
 import cv2
 import logging
 import sys
-import time
+from queue import Queue
+
+
+debug_queue = Queue()
 
 # check if the command-line argument `debug` was passed to the script
 # to activate debug mode
@@ -15,6 +18,7 @@ if len(sys.argv) > 1 and sys.argv[1] == 'debug':
 else:
     debug = False
 
+connected_clients = set()
 cam = ChessCam()
 TRUE_COLOR_MODE = True
 colors_rgb = ((0, 0, 0), (0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0))
@@ -28,6 +32,14 @@ def calibrate(positions, color_classes) -> str:
 
 def get_board_colors():
     return {"board_colors": cam.chess_board_values}
+
+
+def broadcast_chessboard_values():
+    if connected_clients:
+        websockets.broadcast(connected_clients, get_board_colors())
+    else:
+        # send_shout_to_debug_interface() put into
+        debug_queue.put("No clients connected")
 
 
 async def debug_loop():
@@ -81,7 +93,7 @@ async def send_color_classes_to_debug_interface(websocket):
             print(payload)
 
 
-async def updated_seqquencer_pad(websocket, payload, send_all_fields=True):
+async def updated_sequencer_pad(websocket, payload, send_all_fields=True):
 
     if send_all_fields:
         mean_colors = cam.get_color_of_all_fields()
@@ -104,6 +116,9 @@ async def updated_seqquencer_pad(websocket, payload, send_all_fields=True):
 
 async def handle_listener(websocket):
     while True:
+        # Check if button pressed
+        if connected_clients:
+            broadcast_chessboard_values()
         try:
             message = await websocket.recv()
             json_request = json.loads(message)
@@ -137,12 +152,20 @@ async def handle_listener(websocket):
                 "topic": "sequencer:foyer",
                 "payload": chess_board_color_classes,
                 "ref": ""}
+        elif json_request["event"] == "subscribe":
+            connected_clients.update(websocket)
+            json_response = {
+                "event": "subscription_success",
+                "topic": "sequencer:foyer",
+                "payload": "",
+                "ref": ""}
         else:
             json_response = {
                 "event": "shout",
                 "topic": "sequencer:foyer",
                 "payload": {"msg": f"Unknown event {json_request['event']}"},
                 "ref": ""}
+
         await websocket.send(json.dumps(json_response))
 
 
@@ -176,15 +199,15 @@ async def handle_debug_connection(
                 if TRUE_COLOR_MODE:
                     await send_color_classes_to_debug_interface(websocket)
                 else:
-                    await updated_seqquencer_pad(websocket, payload)
+                    await updated_sequencer_pad(websocket, payload)
             elif json_response["event"] == "clear":
                 # await send_color_classes_to_debug_interface(websocket)
                 payload = json_response["payload"]
-                await updated_seqquencer_pad(websocket, payload)
+                await updated_sequencer_pad(websocket, payload)
             elif json_response["event"] == "updated_sequencerpad":
                 # if a pad was clicked, we set the same field to the current color measured by the camera
                 payload = json_response["payload"]
-                await updated_seqquencer_pad(websocket, payload)
+                await updated_sequencer_pad(websocket, payload)
             elif json_response["event"] == "calibrate":
                 payload = json_response["payload"]    # [{'color': 4, 'padid': 1, 'position': [0, 1]}]
                 positions = [p['position'] for p in payload]
