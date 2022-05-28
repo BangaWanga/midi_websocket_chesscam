@@ -70,10 +70,11 @@ class sequencer:
 
     async def handle_network_connection(self, chesscam_adress: str = "ws://localhost:8765"):
         global connection
-        async with websockets.connect(chesscam_adress) as websocket:
+        async with websockets.connect(chesscam_adress, ping_interval=10, ping_timeout=100) as websocket:
             await connect_to_chesscam(websocket)
             while True:
                 msg = await websocket.recv()
+                print(msg)
                 self.handle_network_input(json.loads(msg))
 
     def handle_network_input(self, json_message: dict):

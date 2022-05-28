@@ -29,8 +29,7 @@ colors_rgb = ((0, 0, 0), (0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0))
 pos_id_to_pos_tuple = lambda pos_id: [math.ceil((pos_id - 7) / 8), pos_id % 8]
 
 
-def process_controller_input(self) -> set: # returns set with strings (actions)
-    inputs = self.game_controller.get_inputs()
+def process_controller_input(inputs: list) -> set: # returns set with strings (actions)
     button_down = False
     button_up = False
     color_class = None
@@ -66,18 +65,20 @@ def get_board_colors() -> typing.Dict[int, int]:
     return {"board_colors": cam.chess_board_values}
 
 
-def broadcast_chessboard_values():
-    if connected_clients:
+async def broadcast_chessboard_values(websocket):
         chess_board_color_classes = get_board_colors()
         json_response = {
             "event": "board_colors",
             "topic": "sequencer:foyer",
             "payload": chess_board_color_classes,
             "ref": ""}
-        websockets.broadcast(connected_clients, json.dumps(json_response))
-    else:
+        print(json_response)
+        websockets.broadcast({websocket}, json.dumps(json_response))
+        await asyncio.sleep(1)
+
         # send_shout_to_debug_interface() put into
-        debug_queue.put("No clients connected")
+        # print("no clients connected")
+        # debug_queue.put("No clients connected")
 
 
 async def debug_loop():
@@ -155,11 +156,7 @@ async def updated_sequencer_pad(websocket, payload, send_all_fields=True):
 async def handle_listener(websocket):
     while True:
         # Check if button pressed
-        actions = game_controller.get_inputs()
-        if "broadcast" in actions:
-            print("Broadcast")
-            if connected_clients:
-                broadcast_chessboard_values()
+
         try:
             message = await websocket.recv()
             json_request = json.loads(message)
@@ -175,7 +172,6 @@ async def handle_listener(websocket):
                 "payload": {"msg": "Message does not contain event"},
                 "ref": ""}
             await websocket.send(json.dumps(json_response))
-
         if json_request["event"] == "calibrate":
             payload = json_request["payload"]
             positions = [p['position'] for p in payload]
@@ -195,19 +191,30 @@ async def handle_listener(websocket):
                 "ref": ""}
         elif json_request["event"] == "subscribe":
             connected_clients.add(websocket)
-            json_response = {
+            greeting = {
                 "event": "subscription_success",
                 "topic": "sequencer:foyer",
                 "payload": "",
                 "ref": ""}
-            print("Someone subscribed! I believe it not")
+            await websocket.send(json.dumps(greeting))
+            try:
+                while True:
+                    inputs = game_controller.get_inputs()
+                    actions = process_controller_input(inputs)
+                    if "broadcast" in actions:
+                        await broadcast_chessboard_values(websocket)
+                    else:
+                        pass
+            except Exception as e:
+                print("Lost connection: ", e)
+                continue
+        # print("Someone subscribed! I believe it not")
         else:
             json_response = {
                 "event": "shout",
                 "topic": "sequencer:foyer",
                 "payload": {"msg": f"Unknown event {json_request['event']}"},
                 "ref": ""}
-
         await websocket.send(json.dumps(json_response))
 
 
