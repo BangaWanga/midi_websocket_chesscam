@@ -194,11 +194,13 @@ async def handle_debug_events(websocket):
             else:
                 msg = "Saving samples did not work"
             await send_shout_to_debug_interface(websocket, msg)
-        elif json_response["event"] == "toggle_true_colors":
+        elif json_response["event"] == "toggle_true_color":
+            global TRUE_COLOR_MODE
             TRUE_COLOR_MODE = not TRUE_COLOR_MODE
             if TRUE_COLOR_MODE:
                 await send_color_classes_to_debug_interface(websocket)
             else:
+                payload = json_response["payload"]
                 await updated_sequencer_pad(websocket, payload)
         elif json_response["event"] == "clear":
             # await send_color_classes_to_debug_interface(websocket)
@@ -254,6 +256,8 @@ async def handle_debug_connection(
                 if TRUE_COLOR_MODE:
                     await send_color_classes_to_debug_interface(websocket)
                 else:
+                    payload = json_response["payload"]
+                    print(payload)
                     await updated_sequencer_pad(websocket, payload)
             elif json_response["event"] == "clear":
                 # await send_color_classes_to_debug_interface(websocket)
@@ -278,6 +282,7 @@ async def handle_debug_connection(
                 await send_shout_to_debug_interface(websocket, msg=f"Unknown event {json_response['event']}")
     except Exception as e:
         print(e)
+        raise
 
 
 async def main():

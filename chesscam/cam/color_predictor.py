@@ -161,10 +161,10 @@ class RadiusNearestNeighbors(ColorPredictor):
         if self.model is None:
             return None, None
 
-        pred_class_idx = self.model.predict([col]).squeeze()[0]
+        pred_class_idx = self.model.predict([col]).squeeze()
 
-        pred_probs = self.model.predict_probe([col]).squeeze()
-        pred_prob = pred_probs[pred_class]
+        pred_probs = self.model.predict_proba([col]).squeeze()
+        pred_prob = pred_probs[pred_class_idx]
 
         return pred_class_idx, pred_prob
 
