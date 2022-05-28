@@ -1,9 +1,11 @@
-midi_default_in = "MIDI 1 x 1"
-midi_default_out = "MIDI 1 x 1"
+#midi_default_in = "MIDI 1 x 1"
+#midi_default_out = "MIDI 1 x 1"
+midi_default_in = 'MIDI 1 x 1:MIDI 1 x 1 MIDI 1 24:0'
+midi_default_out = 'MIDI 1 x 1:MIDI 1 x 1 MIDI 1 24:0'
 
 use_midi_clock = True
 
-midi_virtual_channel = True
+midi_virtual_channel = False
 midi_virtual_channel_name = "rz midi channel"
 
 midi_value = {
