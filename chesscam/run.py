@@ -215,6 +215,7 @@ async def handle_listener(websocket):
                 else:
                     pass    # nothing from controller
             except (websockets.ConnectionClosed, Exception) as e:
+                raise
                 return
     else:
         json_response = {
