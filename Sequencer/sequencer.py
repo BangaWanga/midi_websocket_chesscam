@@ -27,7 +27,6 @@ class sequencer:
     def __init__(self, sequence_count=4, standalone=False):
         self.init_midi()
         self.sequence_count = sequence_count
-        self.clear_sequencer()
         self.bpm = 120
         self.running = False
         self.midi_clock_index = 1
@@ -35,6 +34,8 @@ class sequencer:
         self.midi_off_msgs = []
         self.standalone = standalone
         self.sequence = []  # Rolli ist das okay so?
+        self.clear_sequencer()
+
 
     def clear_sequencer(self):
         self.sequence = []
@@ -66,7 +67,7 @@ class sequencer:
             self.process_output()
             sleep(self.getMSFor16inBpm())
 
-        # self.midiin.set_callback(self.handle_midi_input)
+        self.midiin.set_callback(self.handle_midi_input)
         while True:
             try:
                 await self.handle_network_connection()  # runs forever
@@ -130,6 +131,7 @@ class sequencer:
             msg = seq.run()
             if msg:
                 messages.append([sequence_nr,msg])
+                #print(f"Sending {self.get_midi_for_valu(msg, sequence_nr)}")
                 self.midiout.send_message(self.get_midi_for_valu(msg, sequence_nr))
 
         for msg in self.midi_off_msgs:
