@@ -164,6 +164,7 @@ async def handle_listener(websocket):
             break
         except Exception as e:
             logging.log(msg=e, level=logging.ERROR)
+            print("exception: ", e)
             continue
         if "event" not in json_request:
             json_response = {
@@ -197,7 +198,7 @@ async def handle_listener(websocket):
                 "payload": "",
                 "ref": ""}
             await websocket.send(json.dumps(greeting))
-            while True:
+            while True:     # Go into GameController -> Sequencer Loop
                 try:
                     inputs = game_controller.get_inputs()
                     actions = process_controller_input(inputs)
@@ -205,10 +206,10 @@ async def handle_listener(websocket):
                         await broadcast_chessboard_values(websocket)
                     else:
                         pass    # nothing from controller
-                except Exception as e:
+                except (websockets.ConnectionClosed, Exception) as e:
                     print("Lost connection: ", e)
                     break
-
+            json_response = None
         # print("Someone subscribed! I believe it not")
         else:
             json_response = {
@@ -216,7 +217,8 @@ async def handle_listener(websocket):
                 "topic": "sequencer:foyer",
                 "payload": {"msg": f"Unknown event {json_request['event']}"},
                 "ref": ""}
-        await websocket.send(json.dumps(json_response))
+        if json_response is not None:
+            await websocket.send(json.dumps(json_response))
 
 
 async def handle_debug_events(websocket):
