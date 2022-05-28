@@ -61,7 +61,8 @@ class sequencer:
 
     async def run(self):
         self.running = True
-        while self.running and self.standalone:
+        while self.running and not config.use_midi_clock:
+            print("Using internal Clock")
             self.process_output()
             sleep(self.getMSFor16inBpm())
 

@@ -321,7 +321,8 @@ async def handle_debug_connection(
             else:
                 await send_shout_to_debug_interface(websocket, msg=f"Unknown event {json_response['event']}")
     except Exception as e:
-        print(e)
+        print("Could not connect to debug interface")
+        await asyncio.sleep(0.5)
 
 
 async def main():
