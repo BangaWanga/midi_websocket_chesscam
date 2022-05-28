@@ -53,18 +53,14 @@ class ChessCam:
     def load_color_samples(self) -> bool:
         return self.overlay.color_predictor.load_latest_save_file()
 
-    def calibrate(self, positions, selected_colors, n_frames=50) -> str:
-        succ = True
+    def calibrate(self, positions, selected_colors, n_frames=1) -> str:
         for _f in range(n_frames):
             frame_std = self.get_frame()
             if frame_std is None:
                 return "No frame detected"
-            succ = succ and self.overlay.calibrate(frame_std, positions, selected_colors)
+            self.overlay.calibrate(frame_std, positions, selected_colors)
         # succ = succ and self.save_color_samples()
-        if succ:
-            return "Calibration worked!"
-        else:
-            return "Could not write file (or other error)"
+        return "Calibration worked!"
 
     def get_board_colors(self):# -> typing.Optional[dict[int, int]]:
         frame_std = self.get_frame()

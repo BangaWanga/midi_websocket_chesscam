@@ -73,7 +73,7 @@ class ColorPredictor:
             color_class = color_classes[i]
             rgb_value = rgb_values[i]
             self.color_data[color_class].append(list(rgb_value))
-        self.save_samples()
+        # self.save_samples()
 
     def color_class_to_str(self, col_class: int):
         if len(self.colors) - 1 < col_class:
