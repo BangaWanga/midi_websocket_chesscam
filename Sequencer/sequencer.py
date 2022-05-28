@@ -25,7 +25,7 @@ async def connect_to_chesscam(websocket):
 
 class sequencer:
     def __init__(self, sequence_count=4, standalone=False):
-        # self.init_midi()
+        self.init_midi()
         self.sequence_count = sequence_count
         self.clear_sequencer()
         self.bpm = 120

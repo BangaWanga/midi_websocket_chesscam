@@ -78,7 +78,7 @@ async def broadcast_chessboard_values(websocket):
             "ref": ""}
         print(json_response)
         websockets.broadcast({websocket}, json.dumps(json_response))
-        await asyncio.sleep(1)
+        await asyncio.sleep(.1)
 
         # send_shout_to_debug_interface() put into
         # print("no clients connected")
