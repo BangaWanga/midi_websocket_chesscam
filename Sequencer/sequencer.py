@@ -66,7 +66,7 @@ class sequencer:
             self.process_output()
             sleep(self.getMSFor16inBpm())
 
-        # self.midiin.set_callback(self.handle_midi_input)
+        self.midiin.set_callback(self.handle_midi_input)
         while True:
             try:
                 await self.handle_network_connection()  # runs forever
