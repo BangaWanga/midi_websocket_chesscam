@@ -227,6 +227,8 @@ async def handle_listener(websocket):
 
 
 async def handle_debug_events(websocket):
+    global TRUE_COLOR_MODE
+
     while True:
         response = await websocket.recv()
         json_response = json.loads(response)
@@ -248,7 +250,6 @@ async def handle_debug_events(websocket):
                 msg = "Saving samples did not work"
             await send_shout_to_debug_interface(websocket, msg)
         elif json_response["event"] == "toggle_true_color":
-            global TRUE_COLOR_MODE
             TRUE_COLOR_MODE = not TRUE_COLOR_MODE
             if TRUE_COLOR_MODE:
                 await send_color_classes_to_debug_interface(websocket)
@@ -257,7 +258,6 @@ async def handle_debug_events(websocket):
                 await updated_sequencer_pad(websocket, payload)
         elif json_response["event"] == "clear":
             # await send_color_classes_to_debug_interface(websocket)
-            global TRUE_COLOR_MODE
             if TRUE_COLOR_MODE:
                 await send_color_classes_to_debug_interface(websocket)
             else:
