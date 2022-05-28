@@ -18,7 +18,7 @@ class ControllerButtons(enum.Enum):
 
 class Game_Controller:
     def __init__(self):
-        pygame.init()
+        pygame.joystick.init()
         if pygame.joystick.get_count() < 1:
             # raise IOError("No Joystick connected")
             print("No Joystick connected")

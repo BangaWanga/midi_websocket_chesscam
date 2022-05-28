@@ -70,7 +70,7 @@ class sequencer:
         while True:
             try:
                 await self.handle_network_connection()  # runs forever
-            except (websockets.exceptions.InvalidMessage, ConnectionRefusedError, asyncio.exceptions.TimeoutError):
+            except (websockets.exceptions.InvalidMessage, ConnectionRefusedError):
                 print("Could not establish connection to chesscam")
                 await asyncio.sleep(1)
 
