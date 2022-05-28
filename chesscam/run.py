@@ -286,62 +286,67 @@ async def handle_debug_events(websocket):
 async def handle_debug_connection(
         debugger_address: str = 'ws://192.168.8.122:4000/sequencersocket/websocket'
 ):
+    async with websockets.connect(debugger_address) as websocket:
+        await connect_to_debug_interface(websocket)
+        await handle_debug_events(websocket)
+        print("Connection with debugger established")
+        while True:
+            try:
+                await handle_debug_connection(websocket)
+            except Exception as e:
+                print("Could not connect to debug interface. Sleeping for 0.5 seconds")
+                await asyncio.sleep(0.5)
+                break
+
+
+async def handle_running_debug_connection(websocket):
     while True:
-        try:
-            async with websockets.connect(debugger_address) as websocket:
-                await connect_to_debug_interface(websocket)
-                await handle_debug_events(websocket)
-            print("Connection with debugger established")
-            while True:
-                response = await websocket.recv()
-                json_response = json.loads(response)
+        response = await websocket.recv()
+        json_response = json.loads(response)
 
-                if json_response["event"] == "load_calibration":
-                    succ = cam.load_color_samples()
-                    if succ:
-                        msg = "Loading samples successful"
-                    else:
-                        msg = "Loading samples did not work"
-                    await send_shout_to_debug_interface(websocket, msg)
-                elif json_response["event"] == "save_calibration":
-                    succ = cam.save_color_samples()
-                    if succ:
-                        msg = "Saving samples successful"
-                    else:
-                        msg = "Saving samples did not work"
-                    await send_shout_to_debug_interface(websocket, msg)
-                elif json_response["event"] == "toggle_true_colors":
-                    global TRUE_COLOR_MODE
-                    TRUE_COLOR_MODE = not TRUE_COLOR_MODE
-                    if TRUE_COLOR_MODE:
-                        await send_color_classes_to_debug_interface(websocket)
-                    else:
-                        await updated_sequencer_pad(websocket, payload)
-                elif json_response["event"] == "clear":
-                    # await send_color_classes_to_debug_interface(websocket)
-                    payload = json_response["payload"]
-                    await updated_sequencer_pad(websocket, payload)
-                elif json_response["event"] == "updated_sequencerpad":
-                    # if a pad was clicked, we set the same field to the current color measured by the camera
-                    payload = json_response["payload"]
-                    await updated_sequencer_pad(websocket, payload)
-                elif json_response["event"] == "calibrate":
-                    payload = json_response["payload"]    # [{'color': 4, 'padid': 1, 'position': [0, 1]}]
-                    positions = [p['position'] for p in payload]
-                    color_classes = [p["color"] for p in payload]
-                    calibrate_msg = calibrate(positions, color_classes)
-                    logging.log(msg=calibrate_msg, level=logging.DEBUG)
-                    print("Calibrate")
+        if json_response["event"] == "load_calibration":
+            succ = cam.load_color_samples()
+            if succ:
+                msg = "Loading samples successful"
+            else:
+                msg = "Loading samples did not work"
+            await send_shout_to_debug_interface(websocket, msg)
+        elif json_response["event"] == "save_calibration":
+            succ = cam.save_color_samples()
+            if succ:
+                msg = "Saving samples successful"
+            else:
+                msg = "Saving samples did not work"
+            await send_shout_to_debug_interface(websocket, msg)
+        elif json_response["event"] == "toggle_true_colors":
+            global TRUE_COLOR_MODE
+            TRUE_COLOR_MODE = not TRUE_COLOR_MODE
+            if TRUE_COLOR_MODE:
+                await send_color_classes_to_debug_interface(websocket)
+            else:
+                await updated_sequencer_pad(websocket, payload)
+        elif json_response["event"] == "clear":
+            # await send_color_classes_to_debug_interface(websocket)
+            payload = json_response["payload"]
+            await updated_sequencer_pad(websocket, payload)
+        elif json_response["event"] == "updated_sequencerpad":
+            # if a pad was clicked, we set the same field to the current color measured by the camera
+            payload = json_response["payload"]
+            await updated_sequencer_pad(websocket, payload)
+        elif json_response["event"] == "calibrate":
+            payload = json_response["payload"]  # [{'color': 4, 'padid': 1, 'position': [0, 1]}]
+            positions = [p['position'] for p in payload]
+            color_classes = [p["color"] for p in payload]
+            calibrate_msg = calibrate(positions, color_classes)
+            logging.log(msg=calibrate_msg, level=logging.DEBUG)
+            print("Calibrate")
 
-                    await send_shout_to_debug_interface(websocket, calibrate_msg)
-                    await send_color_classes_to_debug_interface(websocket)
+            await send_shout_to_debug_interface(websocket, calibrate_msg)
+            await send_color_classes_to_debug_interface(websocket)
 
-                else:
-                    await send_shout_to_debug_interface(websocket, msg=f"Unknown event {json_response['event']}")
-        except Exception as e:
-            print("Could not connect to debug interface. Sleeping for 0.5 seconds")
-            await asyncio.sleep(0.5)
-            break
+        else:
+            await send_shout_to_debug_interface(websocket, msg=f"Unknown event {json_response['event']}")
+
 
 
 async def main():
