@@ -1,5 +1,6 @@
 import typing
 import cv2
+import numpy as np
 from cam import camera
 from cam import overlay
 from cam import image_processing
@@ -29,6 +30,7 @@ class ChessCam:
             frame_std = image_processing.balance_colors(frame_std, origin, field_w, field_h)
 
         if frame_std is None and debug:
+            frame = np.flip(frame, axis=2)
             return frame
 
         return frame_std
