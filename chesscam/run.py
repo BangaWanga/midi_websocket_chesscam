@@ -159,143 +159,156 @@ async def updated_sequencer_pad(websocket, payload, send_all_fields=True):
 
 async def handle_listener(websocket):
     # Check if button pressed
+    async for message in websocket:
+        try:
+            # message = await websocket.recv()
+            json_request = json.loads(message)
 
-    try:
-        message = await websocket.recv()
-        json_request = json.loads(message)
-    except websockets.ConnectionClosedOK:
-        return # break
-    except Exception as e:
-        logging.log(msg=e, level=logging.ERROR)
-        debug_queue.put("exception: " + str(e))
-        return #continue
-    if "event" not in json_request:
-        json_response = {
-            "event": "shout",
-            "topic": "sequencer:foyer",
-            "payload": {"msg": "Message does not contain event"},
-            "ref": ""}
-        await websocket.send(json.dumps(json_response))
-    if json_request["event"] == "calibrate":
-        payload = json_request["payload"]
+            if "event" not in json_request:
+                json_response = {
+                    "event": "shout",
+                    "topic": "sequencer:foyer",
+                    "payload": {"msg": "Message does not contain event"},
+                    "ref": ""}
+                await websocket.send(json.dumps(json_response))
+            if json_request["event"] == "calibrate":
+                payload = json_request["payload"]
+                positions = [p['position'] for p in payload]
+                color_classes = [p["color"] for p in payload]
+                calibrate_msg = calibrate(positions, color_classes)
+                json_response = {
+                    "event": "calibrate_feedback",
+                    "topic": "sequencer:foyer",
+                    "payload": {"msg": calibrate_msg},
+                    "ref": ""}
+            elif json_request["event"] == "board_colors":
+                chess_board_color_classes = get_board_colors()
+                json_response = {
+                    "event": "board_colors",
+                    "topic": "sequencer:foyer",
+                    "payload": chess_board_color_classes,
+                    "ref": ""}
+            elif json_request["event"] == "subscribe":
+                # connected_clients.add(websocket)
+                greeting = {
+                    "event": "subscription_success",
+                    "topic": "sequencer:foyer",
+                    "payload": "",
+                    "ref": ""}
+                await websocket.send(json.dumps(greeting))
+                debug_queue.put("Sequencer subscribed to chesscam")
+                while True:     # Go into GameController -> Sequencer Loop
+                    try:
+                        inputs = game_controller.get_inputs()
+                        actions = process_controller_input(inputs)
+                        if "broadcast" in actions:
+                            await broadcast_chessboard_values(websocket)
+                        elif "reconnect" in actions:
+                            debug_queue.put("Reconnecting to sequencer...")
+                            print("Reconnecting...")
+                            return
+                        else:
+                            pass    # nothing from controller
+                    except (websockets.ConnectionClosed, Exception) as e:
+                        raise
+                        return
+            else:
+                json_response = {
+                    "event": "shout",
+                    "topic": "sequencer:foyer",
+                    "payload": {"msg": f"Unknown event {json_request['event']}"},
+                    "ref": ""}
+            if json_response is not None:
+                await websocket.send(json.dumps(json_response))
+
+        except websockets.ConnectionClosedOK:
+            return # break
+        except Exception as e:
+            logging.log(msg=e, level=logging.ERROR)
+            debug_queue.put("exception: " + str(e))
+            return #continue
+
+
+async def handle_debug_message(response, websocket):
+    global TRUE_COLOR_MODE
+
+    json_response = json.loads(response)
+    while not debug_queue.empty():
+        await send_shout_to_debug_interface(websocket, msg=f"Debug Queue: {debug_queue.get(timeout=0.1)}")
+
+    if json_response["event"] == "load_calibration":
+        succ = cam.load_color_samples()
+        if succ:
+            msg = "Loading samples successful"
+        else:
+            msg = "Loading samples did not work"
+        await send_shout_to_debug_interface(websocket, msg)
+    elif json_response["event"] == "save_calibration":
+        succ = cam.save_color_samples()
+        if succ:
+            msg = "Saving samples successful"
+        else:
+            msg = "Saving samples did not work"
+        await send_shout_to_debug_interface(websocket, msg)
+    elif json_response["event"] == "toggle_true_color":
+        TRUE_COLOR_MODE = not TRUE_COLOR_MODE
+        if TRUE_COLOR_MODE:
+            await send_color_classes_to_debug_interface(websocket)
+        else:
+            payload = json_response["payload"]
+            await updated_sequencer_pad(websocket, payload)
+    elif json_response["event"] == "clear":
+        # await send_color_classes_to_debug_interface(websocket)
+        if TRUE_COLOR_MODE:
+            await send_color_classes_to_debug_interface(websocket)
+        else:
+            payload = json_response["payload"]
+            await updated_sequencer_pad(websocket, payload)
+
+    elif json_response["event"] == "updated_sequencerpad":
+        # if a pad was clicked, we set the same field to the current color measured by the camera
+        payload = json_response["payload"]
+        await updated_sequencer_pad(websocket, payload)
+    elif json_response["event"] == "calibrate":
+        payload = json_response["payload"]  # [{'color': 4, 'padid': 1, 'position': [0, 1]}]
         positions = [p['position'] for p in payload]
         color_classes = [p["color"] for p in payload]
         calibrate_msg = calibrate(positions, color_classes)
-        json_response = {
-            "event": "calibrate_feedback",
-            "topic": "sequencer:foyer",
-            "payload": {"msg": calibrate_msg},
-            "ref": ""}
-    elif json_request["event"] == "board_colors":
-        chess_board_color_classes = get_board_colors()
-        json_response = {
-            "event": "board_colors",
-            "topic": "sequencer:foyer",
-            "payload": chess_board_color_classes,
-            "ref": ""}
-    elif json_request["event"] == "subscribe":
-        # connected_clients.add(websocket)
-        greeting = {
-            "event": "subscription_success",
-            "topic": "sequencer:foyer",
-            "payload": "",
-            "ref": ""}
-        await websocket.send(json.dumps(greeting))
-        debug_queue.put("Sequencer subscribed to chesscam")
-        while True:     # Go into GameController -> Sequencer Loop
-            try:
-                inputs = game_controller.get_inputs()
-                actions = process_controller_input(inputs)
-                if "broadcast" in actions:
-                    await broadcast_chessboard_values(websocket)
-                elif "reconnect" in actions:
-                    debug_queue.put("Reconnecting to sequencer...")
-                    print("Reconnecting...")
-                    return
-                else:
-                    pass    # nothing from controller
-            except (websockets.ConnectionClosed, Exception) as e:
-                raise
-                return
+        logging.log(msg=calibrate_msg, level=logging.DEBUG)
+
+        await send_shout_to_debug_interface(websocket, calibrate_msg)
+        await send_color_classes_to_debug_interface(websocket)
+
     else:
-        json_response = {
-            "event": "shout",
-            "topic": "sequencer:foyer",
-            "payload": {"msg": f"Unknown event {json_request['event']}"},
-            "ref": ""}
-    if json_response is not None:
-        await websocket.send(json.dumps(json_response))
-
-
-async def handle_debug_events(websocket):
-    global TRUE_COLOR_MODE
-
-    while True:
-        response = await websocket.recv()
-        json_response = json.loads(response)
-        while not debug_queue.empty():
-            await send_shout_to_debug_interface(websocket, msg=f"Debug Queue: {debug_queue.get(timeout=0.1)}")
-
-        if json_response["event"] == "load_calibration":
-            succ = cam.load_color_samples()
-            if succ:
-                msg = "Loading samples successful"
-            else:
-                msg = "Loading samples did not work"
-            await send_shout_to_debug_interface(websocket, msg)
-        elif json_response["event"] == "save_calibration":
-            succ = cam.save_color_samples()
-            if succ:
-                msg = "Saving samples successful"
-            else:
-                msg = "Saving samples did not work"
-            await send_shout_to_debug_interface(websocket, msg)
-        elif json_response["event"] == "toggle_true_color":
-            TRUE_COLOR_MODE = not TRUE_COLOR_MODE
-            if TRUE_COLOR_MODE:
-                await send_color_classes_to_debug_interface(websocket)
-            else:
-                payload = json_response["payload"]
-                await updated_sequencer_pad(websocket, payload)
-        elif json_response["event"] == "clear":
-            # await send_color_classes_to_debug_interface(websocket)
-            if TRUE_COLOR_MODE:
-                await send_color_classes_to_debug_interface(websocket)
-            else:
-                payload = json_response["payload"]
-                await updated_sequencer_pad(websocket, payload)
-
-        elif json_response["event"] == "updated_sequencerpad":
-            # if a pad was clicked, we set the same field to the current color measured by the camera
-            payload = json_response["payload"]
-            await updated_sequencer_pad(websocket, payload)
-        elif json_response["event"] == "calibrate":
-            payload = json_response["payload"]  # [{'color': 4, 'padid': 1, 'position': [0, 1]}]
-            positions = [p['position'] for p in payload]
-            color_classes = [p["color"] for p in payload]
-            calibrate_msg = calibrate(positions, color_classes)
-            logging.log(msg=calibrate_msg, level=logging.DEBUG)
-
-            await send_shout_to_debug_interface(websocket, calibrate_msg)
-            await send_color_classes_to_debug_interface(websocket)
-
-        else:
-            await send_shout_to_debug_interface(websocket, msg=f"Unknown event {json_response['event']}")
+        await send_shout_to_debug_interface(websocket, msg=f"Unknown event {json_response['event']}")
 
 
 async def handle_debug_connection(
         debugger_address: str = 'ws://192.168.8.122:4000/sequencersocket/websocket'
 ):
-    async with websockets.connect(debugger_address) as websocket:
-        await connect_to_debug_interface(websocket)
-        await handle_debug_events(websocket)
-        print("Connection with debugger established")
-        while True:
-            try:
-                await handle_debug_connection(websocket)
-            except Exception as e:
-                print("Could not connect to debug interface. Sleeping for 0.5 seconds")
-                await asyncio.sleep(0.5)
+    async for websocket in websockets.connect(debugger_address):
+        try:
+            await connect_to_debug_interface(websocket)
+            print("Connection with debugger established")
+            async for message in websocket:
+                await handle_debug_message(message, websocket)
+        except websockets.ConnectionClosed:
+            print("Connection closed, trying to reconnect ...")
+            continue
+
+
+        # async with websockets.connect(debugger_address) as websocket:
+        #     await connect_to_debug_interface(websocket)
+        #     print("Connection with debugger established")
+        #     async for message in websocket:
+        #         await handle_debug_message(message)
+        # await handle_debug_events(websocket)
+        # while True:
+        #     try:
+        #         await handle_debug_connection(websocket)
+        #     except Exception as e:
+        #         print("Could not connect to debug interface. Sleeping for 0.5 seconds")
+        #         await asyncio.sleep(0.5)
 
 
 async def handle_running_debug_connection(websocket):
