@@ -7,7 +7,7 @@ import websockets
 import json
 import asyncio
 
-empty_sequence = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+empty_sequence = [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0]
 
 NOTE_ON = 144
 NOTE_OFF = 144 - 16

@@ -1,6 +1,8 @@
 import pygame
 import enum
+import os
 
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 class ControllerValueTypes(enum.Enum):
     KEY_DOWN = 1539
@@ -18,6 +20,7 @@ class ControllerButtons(enum.Enum):
 
 class Game_Controller:
     def __init__(self):
+        pygame.init()
         pygame.joystick.init()
         if pygame.joystick.get_count() < 1:
             # raise IOError("No Joystick connected")
