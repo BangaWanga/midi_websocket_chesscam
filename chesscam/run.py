@@ -44,6 +44,10 @@ def process_controller_input(inputs: list) -> set: # returns set with strings (a
         if i[1] in (ControllerButtons.A_BTN, ControllerButtons.B_BTN, ControllerButtons.X_BTN, ControllerButtons.Y_BTN):
             if button_down:
                 actions.add("broadcast")
+        if i[1] == ControllerButtons.BACK_BTN:
+            if button_down:
+                actions.add("reconnect")
+
 #        if i[1] == ControllerButtons.B_BTN:
 #            color_class = 1
 #        if i[1] == ControllerButtons.X_BTN:
@@ -191,7 +195,7 @@ async def handle_listener(websocket):
                 "payload": chess_board_color_classes,
                 "ref": ""}
         elif json_request["event"] == "subscribe":
-            connected_clients.add(websocket)
+            # connected_clients.add(websocket)
             greeting = {
                 "event": "subscription_success",
                 "topic": "sequencer:foyer",
@@ -204,13 +208,12 @@ async def handle_listener(websocket):
                     actions = process_controller_input(inputs)
                     if "broadcast" in actions:
                         await broadcast_chessboard_values(websocket)
+                    elif "reconnect" in actions:
+                        return
                     else:
                         pass    # nothing from controller
                 except (websockets.ConnectionClosed, Exception) as e:
-                    print("Lost connection: ", e)
-                    break
-            json_response = None
-        # print("Someone subscribed! I believe it not")
+                    return
         else:
             json_response = {
                 "event": "shout",
