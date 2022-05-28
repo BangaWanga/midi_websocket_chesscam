@@ -67,7 +67,11 @@ class sequencer:
 
         # self.midiin.set_callback(self.handle_midi_input)
         while True:
-            await self.handle_network_connection()  # runs forever
+            try:
+                await self.handle_network_connection()  # runs forever
+            except (websockets.exceptions.InvalidMessage, ConnectionRefusedError):
+                print("Could not establish connection to chesscam")
+                await asyncio.sleep(1)
 
     async def handle_network_connection(self, chesscam_adress: str = "ws://localhost:8765"):
         global connection
