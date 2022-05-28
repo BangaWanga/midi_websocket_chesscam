@@ -66,14 +66,22 @@ class sequencer:
             sleep(self.getMSFor16inBpm())
 
         # self.midiin.set_callback(self.handle_midi_input)
-        await self.handle_network_connection()  # runs forever
+        while True:
+            await self.handle_network_connection()  # runs forever
 
     async def handle_network_connection(self, chesscam_adress: str = "ws://localhost:8765"):
         global connection
-        async with websockets.connect(chesscam_adress, ping_interval=10, ping_timeout=100) as websocket:
+        async with websockets.connect(chesscam_adress) as websocket: # , ping_interval=10, ping_timeout=100) as websocket:
             await connect_to_chesscam(websocket)
             while True:
-                msg = await websocket.recv()
+                try:
+                    msg = await websocket.recv()
+                except websockets.exceptions.ConnectionClosedError:
+                    print("Connection closed")
+                    return
+                except Exception as e:
+                    print("Something went wrong: ", e)
+                    return
                 print(msg)
                 self.handle_network_input(json.loads(msg))
 

@@ -197,17 +197,18 @@ async def handle_listener(websocket):
                 "payload": "",
                 "ref": ""}
             await websocket.send(json.dumps(greeting))
-            try:
-                while True:
+            while True:
+                try:
                     inputs = game_controller.get_inputs()
                     actions = process_controller_input(inputs)
                     if "broadcast" in actions:
                         await broadcast_chessboard_values(websocket)
                     else:
-                        pass
-            except Exception as e:
-                print("Lost connection: ", e)
-                continue
+                        pass    # nothing from controller
+                except Exception as e:
+                    print("Lost connection: ", e)
+                    break
+
         # print("Someone subscribed! I believe it not")
         else:
             json_response = {
