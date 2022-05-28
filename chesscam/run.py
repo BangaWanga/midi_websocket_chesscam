@@ -296,7 +296,6 @@ async def handle_debug_connection(
             except Exception as e:
                 print("Could not connect to debug interface. Sleeping for 0.5 seconds")
                 await asyncio.sleep(0.5)
-                break
 
 
 async def handle_running_debug_connection(websocket):
