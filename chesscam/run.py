@@ -129,11 +129,11 @@ async def send_color_classes_to_debug_interface(websocket):
         await send_shout_to_debug_interface(websocket, "No color detected")
     else:
         values = cam.chess_board_values
-        print(values)
+        #print(values)
         for pos, col_class in values.items():
             payload = {'color': colors_rgb[col_class], 'padid': pos, 'position': [math.ceil((pos - 7) / 8), pos % 8]}
             await send_rgb_to_debug_interface(websocket, payload)
-            print(payload)
+            #print(payload)
 
 
 async def updated_sequencer_pad(websocket, payload, send_all_fields=True):
@@ -168,7 +168,7 @@ async def handle_listener(websocket):
             break
         except Exception as e:
             logging.log(msg=e, level=logging.ERROR)
-            print("exception: ", e)
+            debug_queue.put("exception: " + str(e))
             continue
         if "event" not in json_request:
             json_response = {
@@ -202,6 +202,7 @@ async def handle_listener(websocket):
                 "payload": "",
                 "ref": ""}
             await websocket.send(json.dumps(greeting))
+            debug_queue.put("Sequencer subscribed to chesscam")
             while True:     # Go into GameController -> Sequencer Loop
                 try:
                     inputs = game_controller.get_inputs()
@@ -209,6 +210,7 @@ async def handle_listener(websocket):
                     if "broadcast" in actions:
                         await broadcast_chessboard_values(websocket)
                     elif "reconnect" in actions:
+                        debug_queue.put("Reconnecting to sequencer...")
                         return
                     else:
                         pass    # nothing from controller
@@ -228,6 +230,8 @@ async def handle_debug_events(websocket):
     while True:
         response = await websocket.recv()
         json_response = json.loads(response)
+        while not debug_queue.empty():
+            await send_shout_to_debug_interface(websocket, msg=f"Debug Queue: {debug_queue.get(timeout=0.1)}")
 
         if json_response["event"] == "load_calibration":
             succ = cam.load_color_samples()
@@ -263,7 +267,6 @@ async def handle_debug_events(websocket):
             color_classes = [p["color"] for p in payload]
             calibrate_msg = calibrate(positions, color_classes)
             logging.log(msg=calibrate_msg, level=logging.DEBUG)
-            print("Calibrate")
 
             await send_shout_to_debug_interface(websocket, calibrate_msg)
             await send_color_classes_to_debug_interface(websocket)
