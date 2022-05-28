@@ -158,72 +158,72 @@ async def updated_sequencer_pad(websocket, payload, send_all_fields=True):
 
 
 async def handle_listener(websocket):
-    while True:
-        # Check if button pressed
+    # Check if button pressed
 
-        try:
-            message = await websocket.recv()
-            json_request = json.loads(message)
-        except websockets.ConnectionClosedOK:
-            break
-        except Exception as e:
-            logging.log(msg=e, level=logging.ERROR)
-            debug_queue.put("exception: " + str(e))
-            continue
-        if "event" not in json_request:
-            json_response = {
-                "event": "shout",
-                "topic": "sequencer:foyer",
-                "payload": {"msg": "Message does not contain event"},
-                "ref": ""}
-            await websocket.send(json.dumps(json_response))
-        if json_request["event"] == "calibrate":
-            payload = json_request["payload"]
-            positions = [p['position'] for p in payload]
-            color_classes = [p["color"] for p in payload]
-            calibrate_msg = calibrate(positions, color_classes)
-            json_response = {
-                "event": "calibrate_feedback",
-                "topic": "sequencer:foyer",
-                "payload": {"msg": calibrate_msg},
-                "ref": ""}
-        elif json_request["event"] == "board_colors":
-            chess_board_color_classes = get_board_colors()
-            json_response = {
-                "event": "board_colors",
-                "topic": "sequencer:foyer",
-                "payload": chess_board_color_classes,
-                "ref": ""}
-        elif json_request["event"] == "subscribe":
-            # connected_clients.add(websocket)
-            greeting = {
-                "event": "subscription_success",
-                "topic": "sequencer:foyer",
-                "payload": "",
-                "ref": ""}
-            await websocket.send(json.dumps(greeting))
-            debug_queue.put("Sequencer subscribed to chesscam")
-            while True:     # Go into GameController -> Sequencer Loop
-                try:
-                    inputs = game_controller.get_inputs()
-                    actions = process_controller_input(inputs)
-                    if "broadcast" in actions:
-                        await broadcast_chessboard_values(websocket)
-                    elif "reconnect" in actions:
-                        debug_queue.put("Reconnecting to sequencer...")
-                        return
-                    else:
-                        pass    # nothing from controller
-                except (websockets.ConnectionClosed, Exception) as e:
+    try:
+        message = await websocket.recv()
+        json_request = json.loads(message)
+    except websockets.ConnectionClosedOK:
+        return # break
+    except Exception as e:
+        logging.log(msg=e, level=logging.ERROR)
+        debug_queue.put("exception: " + str(e))
+        return #continue
+    if "event" not in json_request:
+        json_response = {
+            "event": "shout",
+            "topic": "sequencer:foyer",
+            "payload": {"msg": "Message does not contain event"},
+            "ref": ""}
+        await websocket.send(json.dumps(json_response))
+    if json_request["event"] == "calibrate":
+        payload = json_request["payload"]
+        positions = [p['position'] for p in payload]
+        color_classes = [p["color"] for p in payload]
+        calibrate_msg = calibrate(positions, color_classes)
+        json_response = {
+            "event": "calibrate_feedback",
+            "topic": "sequencer:foyer",
+            "payload": {"msg": calibrate_msg},
+            "ref": ""}
+    elif json_request["event"] == "board_colors":
+        chess_board_color_classes = get_board_colors()
+        json_response = {
+            "event": "board_colors",
+            "topic": "sequencer:foyer",
+            "payload": chess_board_color_classes,
+            "ref": ""}
+    elif json_request["event"] == "subscribe":
+        # connected_clients.add(websocket)
+        greeting = {
+            "event": "subscription_success",
+            "topic": "sequencer:foyer",
+            "payload": "",
+            "ref": ""}
+        await websocket.send(json.dumps(greeting))
+        debug_queue.put("Sequencer subscribed to chesscam")
+        while True:     # Go into GameController -> Sequencer Loop
+            try:
+                inputs = game_controller.get_inputs()
+                actions = process_controller_input(inputs)
+                if "broadcast" in actions:
+                    await broadcast_chessboard_values(websocket)
+                elif "reconnect" in actions:
+                    debug_queue.put("Reconnecting to sequencer...")
+                    print("Reconnecting...")
                     return
-        else:
-            json_response = {
-                "event": "shout",
-                "topic": "sequencer:foyer",
-                "payload": {"msg": f"Unknown event {json_request['event']}"},
-                "ref": ""}
-        if json_response is not None:
-            await websocket.send(json.dumps(json_response))
+                else:
+                    pass    # nothing from controller
+            except (websockets.ConnectionClosed, Exception) as e:
+                return
+    else:
+        json_response = {
+            "event": "shout",
+            "topic": "sequencer:foyer",
+            "payload": {"msg": f"Unknown event {json_request['event']}"},
+            "ref": ""}
+    if json_response is not None:
+        await websocket.send(json.dumps(json_response))
 
 
 async def handle_debug_events(websocket):
