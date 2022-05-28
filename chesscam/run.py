@@ -42,7 +42,7 @@ def broadcast_chessboard_values():
             "topic": "sequencer:foyer",
             "payload": chess_board_color_classes,
             "ref": ""}
-        websockets.broadcast(connected_clients, json_response)
+        websockets.broadcast(connected_clients, json.dumps(json_response))
     else:
         # send_shout_to_debug_interface() put into
         debug_queue.put("No clients connected")
@@ -159,12 +159,13 @@ async def handle_listener(websocket):
                 "payload": chess_board_color_classes,
                 "ref": ""}
         elif json_request["event"] == "subscribe":
-            connected_clients.update(websocket)
+            connected_clients.add(websocket)
             json_response = {
                 "event": "subscription_success",
                 "topic": "sequencer:foyer",
                 "payload": "",
                 "ref": ""}
+            print("Someone subscribed! I believe it not")
         else:
             json_response = {
                 "event": "shout",
