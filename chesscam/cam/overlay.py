@@ -3,9 +3,7 @@ import numpy as np
 import itertools
 from typing import Tuple
 import typing
-from enum import Enum
 from cam.color_predictor import NearestNeighbour, RadiusNearestNeighbors
-
 
 
 class Overlay:
@@ -15,8 +13,8 @@ class Overlay:
         self.height = 8
         self.frame_height, self.frame_width = frame_shape
         self.offset = offset
-        # self.color_predictor = NearestNeighbour(colors=self.colors)
-        self.color_predictor = RadiusNearestNeighbors(colors=self.colors, outlier_class_idx=0)
+        self.color_predictor = NearestNeighbour(colors=self.colors)
+        # self.color_predictor = RadiusNearestNeighbors(colors=self.colors, outlier_class_idx=0)
         self.color_predictor.calibrate()
 
         # flattened grid_positions [(0,0), (0, 1), ...]

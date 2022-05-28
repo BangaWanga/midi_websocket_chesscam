@@ -15,8 +15,8 @@ NOTE_OFF = 144 - 16
 connection = None
 
 
-def connect_to_chesscam(websocket):
-    websocket.send(json.dumps({
+async def connect_to_chesscam(websocket):
+    await websocket.send(json.dumps({
                 "event": "subscribe",
                 "topic": "sequencer:foyer",
                 "payload": "",
@@ -24,8 +24,8 @@ def connect_to_chesscam(websocket):
 
 
 class sequencer:
-    def __init__(self, sequence_count = 4):
-        self.init_midi()
+    def __init__(self, sequence_count=4, standalone=False):
+        # self.init_midi()
         self.sequence_count = sequence_count
         self.clear_sequencer()
         self.bpm = 120
@@ -33,6 +33,8 @@ class sequencer:
         self.midi_clock_index = 1
         self.velocity = 127
         self.midi_off_msgs = []
+        self.standalone = standalone
+        self.sequence = []  # Rolli ist das okay so?
 
     def clear_sequencer(self):
         self.sequence = []
@@ -54,56 +56,41 @@ class sequencer:
             self.midiin.open_port(available_ports.index(config.midi_default_in))
 
         self.midiin.ignore_types(sysex=True,
-                             timing=False,
-                             active_sense=True)
+                                 timing=False,
+                                 active_sense=True)
 
     async def run(self):
         self.running = True
-        while self.running and not config.use_midi_clock:
+        while self.running and self.standalone:
             self.process_output()
             sleep(self.getMSFor16inBpm())
 
-        self.midiin.set_callback(self.handle_midi_input)
+        # self.midiin.set_callback(self.handle_midi_input)
+        await self.handle_network_connection()  # runs forever
 
-        while True:
-            pass
-
-    # ssid = "Licht"
-    # pwd = "end1_5$&(#+--)"
-
-    async def subscribe(self, chesscam_adress: str = 'ws://sequencerinterface.local:4000/sequencersocket/websocket'):
+    async def handle_network_connection(self, chesscam_adress: str = "ws://localhost:8765"):
         global connection
-        if connection is None:
-            connection = websockets.connect(chesscam_adress)
-            await connect_to_chesscam(connection)
-
-    async def handle_network_connection(self):
-        global connection
-        try:
-            response = connection.messages.get_nowait()
-            self.handle_network_input(response)
-        except asyncio.queues.QueueEmpty:
-            pass
+        async with websockets.connect(chesscam_adress) as websocket:
+            await connect_to_chesscam(websocket)
+            while True:
+                msg = await websocket.recv()
+                self.handle_network_input(json.loads(msg))
 
     def handle_network_input(self, json_message: dict):
         if json_message["event"] == "subscription_success":
             print("subscription_success, Yeah!")
         elif json_message["event"] == "board_colors":
             sequences = [empty_sequence for _ in range(4)]
-            for col_class, field_id in json_message["payload"].items():
-                sequences[math.floor(field_id / 16)][field_id % 16] =  col_class
+            if not json_message["payload"]["board_colors"]:
+                return
+            for col_class, field_id in json_message["payload"]["board_colors"].items():
+                sequences[math.floor(field_id / 16)][field_id % 16] = col_class
             for idx, s in enumerate(sequences):
                 self.set_sequence(idx, s)
         else:
             print("Unknown event")
 
     def handle_midi_input(self, event, data=None):
-        if not connection:
-            print("No Connection")
-        else:
-            message = await connection.recv()
-            self.handle_network_input(json.loads(message))
-
         message, deltatime = event
         # tirck
         if message == [248]:
@@ -135,7 +122,6 @@ class sequencer:
             self.midiout.send_message(self.get_midi_for_valu(msg[1], msg[0], NOTE_OFF))
         self.midi_off_msgs = messages
 
-
     def get_midi_for_valu(self, val, sequence_nr = 0, midi_cmd = NOTE_ON):
         if val in config.midi_value[sequence_nr]:
             midi_val = config.midi_value[sequence_nr][val]
@@ -155,5 +141,5 @@ class sequencer:
 
 if __name__ == "__main__":
     s = sequencer(4)
-
-    s.run()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(s.run())

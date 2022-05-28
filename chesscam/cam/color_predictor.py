@@ -138,7 +138,6 @@ class RadiusNearestNeighbors(ColorPredictor):
     def __init__(self, colors=("green", "red", "blue", "yellow"), radius=20., outlier_class_idx=0):
         super().__init__(colors)
 
-
         self.model = None
         self.outlier_label = outlier_class_idx
         self.radius = radius
