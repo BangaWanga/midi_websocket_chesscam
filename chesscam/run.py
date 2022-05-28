@@ -8,6 +8,9 @@ import logging
 import sys
 from queue import Queue
 import typing
+from cam import Game_Controller, ControllerValueTypes, ControllerButtons
+
+game_controller = Game_Controller()
 
 debug_queue = Queue()
 
@@ -25,6 +28,35 @@ colors_rgb = ((0, 0, 0), (0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0))
 
 pos_id_to_pos_tuple = lambda pos_id: [math.ceil((pos_id - 7) / 8), pos_id % 8]
 
+
+def process_controller_input(self) -> set: # returns set with strings (actions)
+    inputs = self.game_controller.get_inputs()
+    button_down = False
+    button_up = False
+    color_class = None
+    actions = set()
+    for i in inputs:
+#        if a[0] == ControllerValueTypes.JogWheel:
+#            self.overlay.move_cursor(i[2].axis, i[2].value)
+        if i[0] == ControllerValueTypes.KEY_UP:
+            button_up = True
+        if i[0] == ControllerValueTypes.KEY_DOWN:
+            button_down = True
+        if i[1] in (ControllerButtons.A_BTN, ControllerButtons.B_BTN, ControllerButtons.X_BTN, ControllerButtons.Y_BTN):
+            if button_down:
+                actions.add("broadcast")
+#        if i[1] == ControllerButtons.B_BTN:
+#            color_class = 1
+#        if i[1] == ControllerButtons.X_BTN:
+#            color_class = 2
+#        if i[1] == ControllerButtons.Y_BTN:
+#            color_class = 3
+#        if i[1] == ControllerButtons.BACK_BTN:
+#            if button_down:
+#                self.overlay.color_predictor.save_samples()  # save to config file
+#    if button_down and color_class is not None:
+#        self.overlay.select_field(color_class)
+    return actions
 
 def calibrate(positions, color_classes) -> str:
     return cam.calibrate(positions, color_classes)
@@ -123,8 +155,11 @@ async def updated_sequencer_pad(websocket, payload, send_all_fields=True):
 async def handle_listener(websocket):
     while True:
         # Check if button pressed
-        if connected_clients:
-            broadcast_chessboard_values()
+        actions = game_controller.get_inputs()
+        if "broadcast" in actions:
+            print("Broadcast")
+            if connected_clients:
+                broadcast_chessboard_values()
         try:
             message = await websocket.recv()
             json_request = json.loads(message)
