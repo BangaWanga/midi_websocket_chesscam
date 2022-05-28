@@ -195,7 +195,7 @@ async def handle_debug_events(websocket):
             else:
                 msg = "Saving samples did not work"
             await send_shout_to_debug_interface(websocket, msg)
-        elif json_response["event"] == "toggle_true_colors":
+        elif json_response["event"] == "toggle_true_color":
             TRUE_COLOR_MODE = not TRUE_COLOR_MODE
             if TRUE_COLOR_MODE:
                 await send_color_classes_to_debug_interface(websocket)
